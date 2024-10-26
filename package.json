@@ -1,0 +1,16 @@
+{
+  "name": "wasm-js",
+  "version": "1.0.0",
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "0.20.2",
+    "vite": "^4",
+    "vite-plugin-wasm-pack": "^0.1.12",
+    "@types/node": "^20"
+  },
+  "scripts": {
+    "dev": "vite --host --debug",
+    "build": "vite build --debug",
+    "optimize": "vite optimize --debug"
+  }
+}

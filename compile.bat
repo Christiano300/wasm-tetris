@@ -1,0 +1,1 @@
+wasm-pack build ./lib --target web --out-name lib --release

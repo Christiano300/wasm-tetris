@@ -1,0 +1,4 @@
+node_modules/
+lib/pkg/
+lib/target/
+dist/
