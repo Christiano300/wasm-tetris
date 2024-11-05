@@ -1,6 +1,10 @@
-import init, { Action, Game } from "lib";
+import init, { Action, Game, init_panic_hook } from "lib";
 
-await init("/assets/lib_bg.wasm");
+await init({
+  module_or_path: "/assets/lib_bg.wasm",
+});
+
+init_panic_hook();
 
 let actions = [] as Action[];
 var downPressed = false;
@@ -11,7 +15,7 @@ function update() {
   if (downPressed) {
     actions.push(Action.SoftDrop);
   }
-  game.update(actions);
+  game.update(structuredClone(actions));
   game.draw();
   actions.splice(0, actions.length);
 }

@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use wasm_bindgen::JsCast;
+use wasm_bindgen_test::console_log;
 use web_sys::{
     CanvasRenderingContext2d, OffscreenCanvas, OffscreenCanvasRenderingContext2d as CanvasContext,
 };
@@ -178,7 +179,39 @@ impl DrawingContext {
         }
     }
 
-    pub fn draw_score(&self, score: u32) {}
+    pub fn draw_score(&self, ctx: &CanvasRenderingContext2d, score: u32, x: f64, y: f64) {
+        ctx.clear_rect(x, y, 240., 50.);
+        ctx.set_fill_style_str("#000");
+        ctx.set_text_baseline("top");
+        ctx.set_font("30px sans-serif");
+        let _ = ctx.fill_text_with_max_width(&format!("Score: {score}"), x, y, 240.);
+    }
+
+    pub fn draw_hold(
+        &self,
+        ctx: &CanvasRenderingContext2d,
+        hold: Option<&Tetrimino>,
+        x: f64,
+        y: f64,
+    ) {
+        if let Some(hold) = hold {
+            console_log!("draw hold");
+            self.draw_tetrimino(ctx, hold, x, y, false);
+        }
+    }
+
+    pub fn draw_queue<'a>(
+        &self,
+        ctx: &CanvasRenderingContext2d,
+        next_queue: impl Iterator<Item = &'a Tetrimino>,
+        x: f64,
+        y: f64,
+    ) {
+        for (i, tetrimino) in next_queue.enumerate() {
+            console_log!("queue tetrimino");
+            self.draw_tetrimino(ctx, tetrimino, x, y + 100. * i as f64, false);
+        }
+    }
 }
 
 struct SubImage {

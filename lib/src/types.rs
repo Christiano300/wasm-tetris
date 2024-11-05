@@ -1,5 +1,7 @@
 use core::panic;
 
+use wasm_bindgen_test::console_log;
+
 #[repr(u8)]
 #[derive(Default, Copy, Clone, PartialEq, Eq)]
 pub enum Mino {
@@ -73,6 +75,9 @@ impl Default for Board {
 
 impl Board {
     pub fn place(&mut self, tetrimino: &Tetrimino) {
+        if tetrimino.offset_y < 0 {
+            return;
+        }
         for (y, row) in tetrimino.grid.iter().enumerate() {
             for (x, mino) in row.iter().enumerate() {
                 if *mino {

@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, rc::Rc};
+use std::{collections::VecDeque, mem, rc::Rc};
 
 use crate::{
     draw::DrawingContext,
@@ -82,11 +82,12 @@ impl Game {
             phase: Phase::Generation { frames_left: 0 },
             lockdown_timer: LOCKDOWN_START,
         };
-        for _ in 0..new.next_queue.capacity() {
-            let next_piece = new.get_next_piece();
-            new.next_queue.push_back(next_piece);
+        for _ in 0..5 {
+            let next_kind = new.next_kind();
+            new.next_queue.push_back(Tetrimino::new(next_kind, 0, 0));
         }
-        new.next_piece();
+        let get_next_piece = new.get_next_piece();
+        new.next_piece(get_next_piece);
         new
     }
 
@@ -119,9 +120,12 @@ impl Game {
             );
         }
 
-        // self.drawing_context.draw_score(self.score, 20., 20.);
-        // self.drawing_context.draw_hold(self.hold, 20., 120.);
-        // self.drawing_context.draw_queue(self.next_queue, 700., 20.)
+        self.drawing_context
+            .draw_score(&self.context, self.score, 20., 20.);
+        self.drawing_context
+            .draw_hold(&self.context, self.hold.as_ref(), 20., 120.);
+        self.drawing_context
+            .draw_queue(&self.context, self.next_queue.iter(), 700., 20.)
     }
 
     /// Should be called exaclty 60 times a second
@@ -130,13 +134,14 @@ impl Game {
         match self.phase {
             Phase::Generation { frames_left } => {
                 if frames_left == 0 {
-                    self.next_piece();
+                    let piece = self.get_next_piece();
+                    self.next_piece(piece);
                     self.start_fall();
+                    self.can_hold = true;
                 } else {
                     self.phase = Phase::Generation {
                         frames_left: frames_left - 1,
                     };
-                    log(&format!("Frames left: {}", frames_left - 1));
                 }
             }
             Phase::Falling { timer } => {
@@ -203,11 +208,16 @@ impl Game {
                     match &self.hold {
                         None => {
                             self.hold = Some(Tetrimino::new(self.piece.kind, 0, 0));
-                            self.next_piece();
+                            let piece = self.get_next_piece();
+                            self.next_piece(piece);
                         }
                         Some(_) => {
-                            self.hold = Some(Tetrimino::new(self.piece.kind, 0, 0));
-                            self.next_piece();
+                            let piece = mem::replace(
+                                &mut self.hold,
+                                Some(Tetrimino::new(self.piece.kind, 0, 0)),
+                            );
+
+                            self.next_piece(piece.unwrap());
                         }
                     }
                 }
@@ -281,13 +291,7 @@ impl Game {
         tetrimino.offset_y = y;
     }
 
-    fn next_piece(&mut self) {
-        let mut piece = self
-            .next_queue
-            .pop_front()
-            .expect_throw("Next queue was empty");
-        let next_piece = self.get_next_piece();
-        self.next_queue.push_back(next_piece);
+    fn next_piece(&mut self, mut piece: Tetrimino) {
         Game::place_next_piece(&mut piece);
         if !self.board.can_place(&piece) {
             return self.gameover();
@@ -308,9 +312,14 @@ impl Game {
     }
 
     fn get_next_piece(&mut self) -> Tetrimino {
+        let piece = self
+            .next_queue
+            .pop_front()
+            .expect_throw("Next queue was empty");
         let kind = self.next_kind();
-        Tetrimino::new(kind, 0, 0)
+        self.next_queue.push_back(Tetrimino::new(kind, 0, 0));
+        piece
     }
 
-    fn gameover(&mut self) {}
+    fn gameover(&self) {}
 }
