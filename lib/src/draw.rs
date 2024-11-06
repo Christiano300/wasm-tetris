@@ -153,6 +153,7 @@ impl DrawingContext {
         off_x: f64,
         off_y: f64,
         ghost: bool,
+        outside_grid: bool,
     ) {
         let image = match ghost {
             false => {
@@ -169,11 +170,17 @@ impl DrawingContext {
         for (y, row) in tetrimino.grid.iter().enumerate() {
             for (x, mino) in row.iter().enumerate() {
                 if *mino {
-                    let _ = ctx.draw_image_with_offscreen_canvas(
-                        image,
-                        (x + tetrimino.offset_x as usize) as f64 * 31. + off_x,
-                        (y + tetrimino.offset_y as usize - 20) as f64 * 31. + off_y,
-                    );
+                    let dx = if outside_grid {
+                        x as f64 * 31. + off_x
+                    } else {
+                        (x + tetrimino.offset_x as usize) as f64 * 31. + off_x
+                    };
+                    let dy = if outside_grid {
+                        y as f64 * 31. + off_y
+                    } else {
+                        (y + tetrimino.offset_y as usize - 20) as f64 * 31. + off_y
+                    };
+                    let _ = ctx.draw_image_with_offscreen_canvas(image, dx, dy);
                 }
             }
         }
@@ -195,8 +202,8 @@ impl DrawingContext {
         y: f64,
     ) {
         if let Some(hold) = hold {
-            console_log!("draw hold");
-            self.draw_tetrimino(ctx, hold, x, y, false);
+            ctx.clear_rect(x, y, 31. * 4., 31. * 2.);
+            self.draw_tetrimino(ctx, hold, x, y, false, true);
         }
     }
 
@@ -207,9 +214,9 @@ impl DrawingContext {
         x: f64,
         y: f64,
     ) {
+        ctx.clear_rect(x, y, 31. * 4., 500. + 2. * 31.);
         for (i, tetrimino) in next_queue.enumerate() {
-            console_log!("queue tetrimino");
-            self.draw_tetrimino(ctx, tetrimino, x, y + 100. * i as f64, false);
+            self.draw_tetrimino(ctx, tetrimino, x, y + 100. * i as f64, false, true);
         }
     }
 }

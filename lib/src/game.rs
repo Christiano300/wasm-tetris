@@ -110,12 +110,14 @@ impl Game {
                 BOARD_X + 5.,
                 BOARD_Y + 5.,
                 true,
+                false,
             );
             self.drawing_context.draw_tetrimino(
                 &self.context,
                 &self.piece,
                 BOARD_X + 5.,
                 BOARD_Y + 5.,
+                false,
                 false,
             );
         }

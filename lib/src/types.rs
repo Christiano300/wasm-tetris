@@ -1,7 +1,5 @@
 use core::panic;
 
-use wasm_bindgen_test::console_log;
-
 #[repr(u8)]
 #[derive(Default, Copy, Clone, PartialEq, Eq)]
 pub enum Mino {
