@@ -46,6 +46,7 @@ pub struct Game {
     can_hold: bool,
     phase: Phase,
     lockdown_timer: u8,
+    level_goal: u8,
 }
 
 #[wasm_bindgen]
@@ -81,6 +82,7 @@ impl Game {
             level: 1,
             phase: Phase::Generation { frames_left: 0 },
             lockdown_timer: LOCKDOWN_START,
+            level_goal: 10,
         };
         for _ in 0..5 {
             let next_kind = new.next_kind();
@@ -188,6 +190,11 @@ impl Game {
                             _ => 0,
                         }
                 }
+                self.level_goal -= rows;
+                if self.level_goal <= 0 {
+                    self.level += 1;
+                    self.level_goal += 10;
+                }
                 self.phase = Phase::Generation { frames_left: 12 };
             }
         }
@@ -246,6 +253,13 @@ impl Game {
         self.phase = Phase::Falling {
             timer: match self.level {
                 1 => 60,
+                2 => 40,
+                3 => 25,
+                4 => 20,
+                5 => 15,
+                6 => 12,
+                7 => 10,
+                8 => 8,
                 _ => 30,
             },
         }
