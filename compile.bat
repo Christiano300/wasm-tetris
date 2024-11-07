@@ -1,1 +1,1 @@
-wasm-pack build ./lib --target web --out-name lib --release
+wasm-pack build  --target web --out-name lib --release --no-opt ./lib

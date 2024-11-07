@@ -38,6 +38,3 @@ debug = true
 [features]
 # default = ["console_error_panic_hook", "wee_alloc"]
 default = ["console_error_panic_hook"]
-
-[build]
-target = "wasm32-unknown-unknown"
