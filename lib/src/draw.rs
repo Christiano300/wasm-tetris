@@ -207,6 +207,14 @@ impl DrawingContext {
         }
     }
 
+    pub fn draw_level(&self, ctx: &CanvasRenderingContext2d, level: u8, x: f64, y: f64) {
+        ctx.clear_rect(x, y, 240., 40.);
+        ctx.set_fill_style_str("#000");
+        ctx.set_text_baseline("top");
+        ctx.set_font("30px sans-serif");
+        let _ = ctx.fill_text_with_max_width(&format!("Level: {level}"), x, y, 240.);
+    }
+
     pub fn draw_queue<'a>(
         &self,
         ctx: &CanvasRenderingContext2d,

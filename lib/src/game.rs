@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, mem, rc::Rc};
 
 use crate::{
+    alert,
     draw::DrawingContext,
     types::{Board, Direction, Mino, Tetrimino},
 };
@@ -46,7 +47,7 @@ pub struct Game {
     can_hold: bool,
     phase: Phase,
     lockdown_timer: u8,
-    level_goal: u8,
+    level_goal: i8,
 }
 
 #[wasm_bindgen]
@@ -82,7 +83,7 @@ impl Game {
             level: 1,
             phase: Phase::Generation { frames_left: 0 },
             lockdown_timer: LOCKDOWN_START,
-            level_goal: 10,
+            level_goal: 5,
         };
         for _ in 0..5 {
             let next_kind = new.next_kind();
@@ -129,7 +130,9 @@ impl Game {
         self.drawing_context
             .draw_hold(&self.context, self.hold.as_ref(), 20., 120.);
         self.drawing_context
-            .draw_queue(&self.context, self.next_queue.iter(), 700., 20.)
+            .draw_queue(&self.context, self.next_queue.iter(), 700., 20.);
+        self.drawing_context
+            .draw_level(&self.context, self.level, 20., 200.);
     }
 
     /// Should be called exaclty 60 times a second
@@ -190,10 +193,10 @@ impl Game {
                             _ => 0,
                         }
                 }
-                self.level_goal -= rows;
+                self.level_goal -= rows as i8;
                 if self.level_goal <= 0 {
                     self.level += 1;
-                    self.level_goal += 10;
+                    self.level_goal += 5;
                 }
                 self.phase = Phase::Generation { frames_left: 12 };
             }
@@ -252,15 +255,17 @@ impl Game {
     fn start_fall(&mut self) {
         self.phase = Phase::Falling {
             timer: match self.level {
-                1 => 60,
-                2 => 40,
-                3 => 25,
-                4 => 20,
-                5 => 15,
-                6 => 12,
-                7 => 10,
-                8 => 8,
-                _ => 30,
+                1 => 30,
+                2 => 20,
+                3 => 15,
+                4 => 10,
+                5 => 8,
+                6 => 6,
+                7 => 5,
+                8 => 4,
+                9 => 3,
+                10 => 2,
+                _ => 1,
             },
         }
     }
@@ -337,5 +342,7 @@ impl Game {
         piece
     }
 
-    fn gameover(&self) {}
+    fn gameover(&self) {
+        alert("Verloren");
+    }
 }
