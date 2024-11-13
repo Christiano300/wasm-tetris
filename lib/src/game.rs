@@ -11,6 +11,7 @@ use web_sys::CanvasRenderingContext2d;
 
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
+const LOCKDOWN_MOVES: u8 = 15;
 
 #[wasm_bindgen]
 pub enum Action {
@@ -23,7 +24,7 @@ pub enum Action {
     SoftDrop,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 enum Phase {
     Generation { frames_left: u8 },
     Falling { timer: u8 },
@@ -47,13 +48,9 @@ pub struct Game {
     can_hold: bool,
     phase: Phase,
     lockdown_timer: u8,
+    lockdown_moves: u8,
+    lockdown_y: i8,
     level_goal: i8,
-}
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(msg: &str);
 }
 
 #[wasm_bindgen]
@@ -83,6 +80,8 @@ impl Game {
             level: 1,
             phase: Phase::Generation { frames_left: 0 },
             lockdown_timer: LOCKDOWN_START,
+            lockdown_moves: LOCKDOWN_MOVES,
+            lockdown_y: 0,
             level_goal: 5,
         };
         for _ in 0..5 {
@@ -109,18 +108,18 @@ impl Game {
         if !matches!(self.phase, Phase::Generation { .. }) {
             self.drawing_context.draw_tetrimino(
                 &self.context,
-                &self.ghost,
-                BOARD_X + 5.,
-                BOARD_Y + 5.,
-                true,
-                false,
-            );
-            self.drawing_context.draw_tetrimino(
-                &self.context,
                 &self.piece,
                 BOARD_X + 5.,
                 BOARD_Y + 5.,
                 false,
+                false,
+            );
+            self.drawing_context.draw_tetrimino(
+                &self.context,
+                &self.ghost,
+                BOARD_X + 5.,
+                BOARD_Y + 5.,
+                true,
                 false,
             );
         }
@@ -151,13 +150,20 @@ impl Game {
                     };
                 }
             }
-            Phase::Falling { timer } => {
+            Phase::Falling { mut timer } => {
                 self.process_input(user_actions);
+                if let Phase::Falling { timer: new_timer } = self.phase {
+                    timer = new_timer;
+                }
                 if matches!(self.phase, Phase::Completion) {
                     return;
                 }
                 if timer == 0 {
                     self.board.move_down(&mut self.piece);
+                    if self.piece.offset_y > self.lockdown_y {
+                        self.lockdown_y = self.piece.offset_y;
+                        self.lockdown_moves = LOCKDOWN_MOVES;
+                    }
                     self.start_fall();
                 } else {
                     self.phase = Phase::Falling { timer: timer - 1 }
@@ -208,10 +214,22 @@ impl Game {
     fn process_input(&mut self, actions: Vec<Action>) {
         for action in actions.iter() {
             match action {
-                Action::Left => self.move_x(-1),
-                Action::Right => self.move_x(1),
-                Action::Cw => self.rotate(Direction::Cw),
-                Action::Ccw => self.rotate(Direction::Ccw),
+                Action::Left => {
+                    let move_success = self.move_x(-1);
+                    self.movement(move_success)
+                }
+                Action::Right => {
+                    let move_success = self.move_x(1);
+                    self.movement(move_success)
+                }
+                Action::Cw => {
+                    let move_success = self.rotate(Direction::Cw);
+                    self.movement(move_success)
+                }
+                Action::Ccw => {
+                    let move_success = self.rotate(Direction::Ccw);
+                    self.movement(move_success)
+                }
                 Action::Hold => {
                     if !self.can_hold {
                         continue;
@@ -243,9 +261,8 @@ impl Game {
                 }
                 Action::SoftDrop => {
                     if let Phase::Falling { timer } = self.phase {
-                        self.phase = Phase::Falling {
-                            timer: (timer.saturating_sub(SOFT_FALL_MULT - 1)),
-                        }
+                        let new = timer.saturating_sub(SOFT_FALL_MULT - 1);
+                        self.phase = Phase::Falling { timer: new }
                     }
                 }
             }
@@ -270,14 +287,23 @@ impl Game {
         }
     }
 
-    fn move_x(&mut self, offset: i8) {
-        self.board.move_x(&mut self.piece, offset);
-        self.update_ghost();
+    fn movement(&mut self, move_success: bool) {
+        if move_success && self.phase == Phase::Lock && self.lockdown_moves > 0 {
+            self.lockdown_timer = LOCKDOWN_START;
+            self.lockdown_moves -= 1;
+        }
     }
 
-    fn rotate(&mut self, direction: Direction) {
-        self.board.rotate(&mut self.piece, direction);
+    fn move_x(&mut self, offset: i8) -> bool {
+        let success = self.board.move_x(&mut self.piece, offset);
         self.update_ghost();
+        success
+    }
+
+    fn rotate(&mut self, direction: Direction) -> bool {
+        let success = self.board.rotate(&mut self.piece, direction);
+        self.update_ghost();
+        success
     }
 
     fn update_ghost(&mut self) {
@@ -329,6 +355,7 @@ impl Game {
         }
 
         self.ghost = ghost;
+        self.lockdown_y = piece.offset_y;
         self.piece = piece;
     }
 

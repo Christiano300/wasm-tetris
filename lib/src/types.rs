@@ -132,12 +132,13 @@ impl Board {
 
     /// Rotates the tetrimino with wall-kicks. Returns if the rotation was successful.
     pub fn rotate(&self, tetrimino: &mut Tetrimino, direction: Direction) -> bool {
+        let to = tetrimino.rotation.rotate(direction);
         let offsets = match tetrimino.kind {
             Mino::O | Mino::Empty => return true,
             Mino::J | Mino::L | Mino::S | Mino::Z | Mino::T => {
-                Board::get_three_offsets(tetrimino.rotation, direction)
+                Board::get_three_offsets(tetrimino.rotation, to)
             }
-            Mino::I => Board::get_i_offsets(tetrimino.rotation, direction),
+            Mino::I => Board::get_i_offsets(tetrimino.rotation, to),
         };
 
         let mut clone = tetrimino.clone();
@@ -154,16 +155,16 @@ impl Board {
             tetrimino.rotate_grid(direction);
             tetrimino.offset_x += x;
             tetrimino.offset_y += y;
+            tetrimino.rotation = to;
             return true;
         }
 
         false
     }
 
-    fn get_three_offsets(rot: Rotation, dir: Direction) -> [(i8, i8); 5] {
-        let to = rot.rotate(dir);
+    fn get_three_offsets(from: Rotation, to: Rotation) -> [(i8, i8); 5] {
         use Rotation as R;
-        match (rot, to) {
+        match (from, to) {
             (R::O, R::R) => [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
             (R::R, R::O) => [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
             (R::R, R::T) => [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
@@ -172,14 +173,13 @@ impl Board {
             (R::L, R::T) => [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
             (R::L, R::O) => [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
             (R::O, R::L) => [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
-            _ => panic!("Tried to invalid rotation from: {rot:?}, to: {to:?}"),
+            _ => panic!("Tried to invalid rotation from: {from:?}, to: {to:?}"),
         }
     }
 
-    fn get_i_offsets(rot: Rotation, dir: Direction) -> [(i8, i8); 5] {
-        let to = rot.rotate(dir);
+    fn get_i_offsets(from: Rotation, to: Rotation) -> [(i8, i8); 5] {
         use Rotation as R;
-        match (rot, to) {
+        match (from, to) {
             (R::O, R::R) => [(0, 0), (-2, 0), (1, 0), (-2, 1), (1, -2)],
             (R::R, R::O) => [(0, 0), (2, 0), (-1, 0), (2, -1), (-1, 2)],
             (R::R, R::T) => [(0, 0), (-1, 0), (2, 0), (-1, -2), (2, 1)],
@@ -188,7 +188,7 @@ impl Board {
             (R::L, R::T) => [(0, 0), (-2, 0), (1, 0), (-2, 1), (1, -2)],
             (R::L, R::O) => [(0, 0), (1, 0), (-2, 0), (1, 2), (-2, -1)],
             (R::O, R::L) => [(0, 0), (-1, 0), (2, 0), (-1, -2), (2, 1)],
-            _ => panic!("Tried invalid rotation from: {rot:?}, to: {to:?}"),
+            _ => panic!("Tried invalid rotation from: {from:?}, to: {to:?}"),
         }
     }
 

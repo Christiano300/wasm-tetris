@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use wasm_bindgen::JsCast;
-use wasm_bindgen_test::console_log;
 use web_sys::{
     CanvasRenderingContext2d, OffscreenCanvas, OffscreenCanvasRenderingContext2d as CanvasContext,
 };
