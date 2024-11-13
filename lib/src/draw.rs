@@ -7,9 +7,14 @@ use web_sys::{
 
 use crate::types::{Mino, Tetrimino};
 
-fn get_base_color(kind: Mino) -> Color {
+const fn get_base_color(kind: Mino) -> Color {
     match kind {
-        Mino::Empty => Color(0, 0, 0, None),
+        Mino::Empty => Color {
+            r: 0,
+            g: 0,
+            b: 0,
+            alpha: None,
+        },
         Mino::I => Color::no_alpha(0, 200, 255),
         Mino::O => Color::no_alpha(255, 255, 0),
         Mino::T => Color::no_alpha(127, 0, 127),
@@ -79,8 +84,8 @@ impl DrawingContext {
         let width = 319;
         let height = 629;
         SubImage::new(width, height, |ctx| {
-            let width = width as f64;
-            let height = height as f64;
+            let width = f64::from(width);
+            let height = f64::from(height);
             ctx.set_fill_style_str(&Color::no_alpha(40, 40, 40).to_rgb());
             ctx.fill_rect(0., 0., width, height);
 
@@ -92,13 +97,13 @@ impl DrawingContext {
             ctx.set_line_width(0.5);
             ctx.begin_path();
             for i in 0..=10 {
-                let x = i as f64 * 31. + 5.;
+                let x = f64::from(i) * 31. + 5.;
                 ctx.move_to(x, 5.);
                 ctx.line_to(x, height - 5.);
             }
 
             for i in 0..=20 {
-                let y = i as f64 * 31. + 5.;
+                let y = f64::from(i) * 31. + 5.;
                 ctx.move_to(5., y);
                 ctx.line_to(width - 5., y);
             }
@@ -110,7 +115,7 @@ impl DrawingContext {
         let _ = ctx.draw_image_with_offscreen_canvas(&self.board.canvas, off_x, off_y);
     }
 
-    fn get_mino_image(&self, kind: Mino) -> Option<&SubImage> {
+    const fn get_mino_image(&self, kind: Mino) -> Option<&SubImage> {
         Some(match kind {
             Mino::Empty => return None,
             Mino::I => &self.i,
@@ -138,8 +143,8 @@ impl DrawingContext {
                 };
                 let _ = ctx.draw_image_with_offscreen_canvas(
                     &image.canvas,
-                    off_x + col as f64 * 31.,
-                    off_y + row as f64 * 31.,
+                    (col as f64) * 31. + off_x,
+                    (row as f64) * 31. + off_y,
                 );
             }
         }
@@ -154,28 +159,27 @@ impl DrawingContext {
         ghost: bool,
         outside_grid: bool,
     ) {
-        let image = match ghost {
-            false => {
-                let Some(image) = self.get_mino_image(tetrimino.kind) else {
-                    return;
-                };
-                image
-            }
-            true => &SubImage::new(30, 30, |ctx| {
-                DrawingContext::draw_ghost_mino(ctx, get_base_color(tetrimino.kind))
-            }),
+        let image = if ghost {
+            &SubImage::new(30, 30, |ctx| {
+                Self::draw_ghost_mino(ctx, get_base_color(tetrimino.kind));
+            })
+        } else {
+            let Some(image) = self.get_mino_image(tetrimino.kind) else {
+                return;
+            };
+            image
         };
         let image = &image.canvas;
         for (y, row) in tetrimino.grid.iter().enumerate() {
             for (x, mino) in row.iter().enumerate() {
                 if *mino {
                     let dx = if outside_grid {
-                        x as f64 * 31. + off_x
+                        (x as f64) * 31. + off_x
                     } else {
                         (x + tetrimino.offset_x as usize) as f64 * 31. + off_x
                     };
                     let dy = if outside_grid {
-                        y as f64 * 31. + off_y
+                        (y as f64) * 31. + off_y
                     } else {
                         (y + tetrimino.offset_y as usize - 20) as f64 * 31. + off_y
                     };
@@ -185,7 +189,7 @@ impl DrawingContext {
         }
     }
 
-    pub fn draw_score(&self, ctx: &CanvasRenderingContext2d, score: u32, x: f64, y: f64) {
+    pub fn draw_score(ctx: &CanvasRenderingContext2d, score: u32, x: f64, y: f64) {
         ctx.clear_rect(x, y, 240., 50.);
         ctx.set_fill_style_str("#000");
         ctx.set_text_baseline("top");
@@ -206,7 +210,7 @@ impl DrawingContext {
         }
     }
 
-    pub fn draw_level(&self, ctx: &CanvasRenderingContext2d, level: u8, x: f64, y: f64) {
+    pub fn draw_level(ctx: &CanvasRenderingContext2d, level: u8, x: f64, y: f64) {
         ctx.clear_rect(x, y, 240., 40.);
         ctx.set_fill_style_str("#000");
         ctx.set_text_baseline("top");
@@ -251,46 +255,58 @@ impl SubImage {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
-struct Color(u8, u8, u8, Option<u8>);
+struct Color {
+    r: u8,
+    b: u8,
+    g: u8,
+    alpha: Option<u8>,
+}
 
 impl Color {
-    fn no_alpha(r: u8, g: u8, b: u8) -> Self {
-        Self(r, g, b, None)
+    const fn no_alpha(r: u8, g: u8, b: u8) -> Self {
+        Self {
+            r,
+            g,
+            b,
+            alpha: None,
+        }
     }
 
     fn to_rgb(self) -> String {
-        match self.3 {
-            None => format!("#{:x}{:x}{:x}", self.0, self.1, self.2),
-            Some(alpha) => format!("rgb({} {} {} / {alpha}%)", self.0, self.1, self.2),
-        }
+        self.alpha.map_or_else(
+            || format!("#{:x}{:x}{:x}", self.r, self.g, self.b),
+            |alpha| format!("rgb({} {} {} / {alpha}%)", self.r, self.g, self.b),
+        )
     }
 
     fn darken(self, amount: f64) -> Self {
         let multi = 1. - amount;
-        Self(
-            (self.0 as f64 * multi) as u8,
-            (self.1 as f64 * multi) as u8,
-            (self.2 as f64 * multi) as u8,
-            self.3,
-        )
+        Self {
+            r: (f64::from(self.r) * multi) as u8,
+            g: (f64::from(self.g) * multi) as u8,
+            b: (f64::from(self.b) * multi) as u8,
+            ..self
+        }
     }
 
     #[inline]
     fn lighten_single(v: u8, amount: f64) -> u8 {
-        255 - ((255 - v) as f64 * (1. - amount)) as u8
+        255 - (f64::from(255 - v) * (1. - amount)) as u8
     }
 
     fn lighten(self, amount: f64) -> Self {
-        Self(
-            Color::lighten_single(self.0, amount),
-            Color::lighten_single(self.1, amount),
-            Color::lighten_single(self.2, amount),
-            self.3,
-        )
+        Self {
+            r: Self::lighten_single(self.r, amount),
+            g: Self::lighten_single(self.g, amount),
+            b: Self::lighten_single(self.b, amount),
+            ..self
+        }
     }
 
-    #[inline]
-    fn alpha(&self, alpha: u8) -> Self {
-        Self(self.0, self.1, self.2, Some(alpha))
+    const fn alpha(self, value: u8) -> Self {
+        Self {
+            alpha: Some(value),
+            ..self
+        }
     }
 }

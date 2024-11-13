@@ -18,34 +18,34 @@ pub enum Mino {
 #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Rotation {
     #[default]
-    O,
-    R,
-    T,
-    L,
+    Zero,
+    Right,
+    Two,
+    Left,
 }
 
 impl Rotation {
     #[inline]
-    fn cw(&self) -> Self {
-        match *self {
-            Self::O => Self::R,
-            Self::R => Self::T,
-            Self::T => Self::L,
-            Self::L => Self::O,
+    const fn cw(self) -> Self {
+        match self {
+            Self::Zero => Self::Right,
+            Self::Right => Self::Two,
+            Self::Two => Self::Left,
+            Self::Left => Self::Zero,
         }
     }
 
     #[inline]
-    fn ccw(&self) -> Self {
-        match *self {
-            Self::O => Self::L,
-            Self::R => Self::O,
-            Self::T => Self::R,
-            Self::L => Self::T,
+    const fn ccw(self) -> Self {
+        match self {
+            Self::Zero => Self::Left,
+            Self::Right => Self::Zero,
+            Self::Two => Self::Right,
+            Self::Left => Self::Two,
         }
     }
 
-    pub fn rotate(&self, direction: Direction) -> Self {
+    pub const fn rotate(self, direction: Direction) -> Self {
         match direction {
             Direction::Cw => self.cw(),
             Direction::Ccw => self.ccw(),
@@ -100,7 +100,7 @@ impl Board {
         false
     }
 
-    fn check_oob(&self, tetrimino: &Tetrimino) -> bool {
+    fn check_oob(tetrimino: &Tetrimino) -> bool {
         for (y, row) in tetrimino.grid.iter().enumerate() {
             for (x, mino) in row.iter().enumerate() {
                 if !*mino {
@@ -120,10 +120,10 @@ impl Board {
     }
 
     pub fn can_place(&self, tetrimino: &Tetrimino) -> bool {
-        !self.check_oob(tetrimino) && !self.check_collisions(tetrimino)
+        !Self::check_oob(tetrimino) && !self.check_collisions(tetrimino)
     }
 
-    pub fn drop(&mut self, tetrimino: &mut Tetrimino) {
+    pub fn drop(&self, tetrimino: &mut Tetrimino) {
         while self.can_place(tetrimino) {
             tetrimino.offset_y += 1;
         }
@@ -136,9 +136,9 @@ impl Board {
         let offsets = match tetrimino.kind {
             Mino::O | Mino::Empty => return true,
             Mino::J | Mino::L | Mino::S | Mino::Z | Mino::T => {
-                Board::get_three_offsets(tetrimino.rotation, to)
+                Self::get_three_offsets(tetrimino.rotation, to)
             }
-            Mino::I => Board::get_i_offsets(tetrimino.rotation, to),
+            Mino::I => Self::get_i_offsets(tetrimino.rotation, to),
         };
 
         let mut clone = tetrimino.clone();
@@ -165,30 +165,22 @@ impl Board {
     fn get_three_offsets(from: Rotation, to: Rotation) -> [(i8, i8); 5] {
         use Rotation as R;
         match (from, to) {
-            (R::O, R::R) => [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
-            (R::R, R::O) => [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
-            (R::R, R::T) => [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
-            (R::T, R::R) => [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
-            (R::T, R::L) => [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
-            (R::L, R::T) => [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
-            (R::L, R::O) => [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
-            (R::O, R::L) => [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
-            _ => panic!("Tried to invalid rotation from: {from:?}, to: {to:?}"),
+            (_, R::Right) => [(0, 0), (-1, 0), (-1, -1), (0, 2), (-1, 2)],
+            (R::Right, _) => [(0, 0), (1, 0), (1, 1), (0, -2), (1, -2)],
+            (_, R::Left) => [(0, 0), (1, 0), (1, -1), (0, 2), (1, 2)],
+            (R::Left, _) => [(0, 0), (-1, 0), (-1, 1), (0, -2), (-1, -2)],
+            _ => unreachable!("Tried to invalid rotation from: {from:?}, to: {to:?}"),
         }
     }
 
     fn get_i_offsets(from: Rotation, to: Rotation) -> [(i8, i8); 5] {
         use Rotation as R;
         match (from, to) {
-            (R::O, R::R) => [(0, 0), (-2, 0), (1, 0), (-2, 1), (1, -2)],
-            (R::R, R::O) => [(0, 0), (2, 0), (-1, 0), (2, -1), (-1, 2)],
-            (R::R, R::T) => [(0, 0), (-1, 0), (2, 0), (-1, -2), (2, 1)],
-            (R::T, R::R) => [(0, 0), (1, 0), (-2, 0), (1, 2), (-2, -1)],
-            (R::T, R::L) => [(0, 0), (2, 0), (-1, 0), (2, -1), (-1, 2)],
-            (R::L, R::T) => [(0, 0), (-2, 0), (1, 0), (-2, 1), (1, -2)],
-            (R::L, R::O) => [(0, 0), (1, 0), (-2, 0), (1, 2), (-2, -1)],
-            (R::O, R::L) => [(0, 0), (-1, 0), (2, 0), (-1, -2), (2, 1)],
-            _ => panic!("Tried invalid rotation from: {from:?}, to: {to:?}"),
+            (R::Zero, R::Right) | (R::Left, R::Two) => [(0, 0), (-2, 0), (1, 0), (-2, 1), (1, -2)],
+            (R::Right, R::Zero) | (R::Two, R::Left) => [(0, 0), (2, 0), (-1, 0), (2, -1), (-1, 2)],
+            (R::Right, R::Two) | (R::Zero, R::Left) => [(0, 0), (-1, 0), (2, 0), (-1, -2), (2, 1)],
+            (R::Two, R::Right) | (R::Left, R::Zero) => [(0, 0), (1, 0), (-2, 0), (1, 2), (-2, -1)],
+            _ => unreachable!("Tried invalid rotation from: {from:?}, to: {to:?}"),
         }
     }
 
@@ -229,7 +221,7 @@ impl Board {
                     let copy = self.buffer[j - 1];
                     self.buffer[j] = copy;
                 }
-                self.buffer[0] = [Mino::Empty; 10]
+                self.buffer[0] = [Mino::Empty; 10];
             }
         }
         count
@@ -249,9 +241,9 @@ pub struct Tetrimino {
 
 impl Tetrimino {
     pub fn new(kind: Mino, x: i8, y: i8) -> Self {
-        Tetrimino {
+        Self {
             kind,
-            rotation: Rotation::O,
+            rotation: Rotation::Zero,
             offset_x: x,
             offset_y: y,
             grid: match kind {

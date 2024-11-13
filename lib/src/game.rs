@@ -11,7 +11,7 @@ use web_sys::CanvasRenderingContext2d;
 
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
-const LOCKDOWN_MOVES: u8 = 15;
+const LOCKDOWN_MOVES: u8 = 5;
 
 #[wasm_bindgen]
 pub enum Action {
@@ -124,18 +124,17 @@ impl Game {
             );
         }
 
-        self.drawing_context
-            .draw_score(&self.context, self.score, 20., 20.);
+        DrawingContext::draw_score(&self.context, self.score, 20., 20.);
         self.drawing_context
             .draw_hold(&self.context, self.hold.as_ref(), 20., 120.);
         self.drawing_context
             .draw_queue(&self.context, self.next_queue.iter(), 700., 20.);
-        self.drawing_context
-            .draw_level(&self.context, self.level, 20., 200.);
+        DrawingContext::draw_level(&self.context, self.level, 20., 200.);
     }
 
     /// Should be called exaclty 60 times a second
     #[wasm_bindgen]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn update(&mut self, user_actions: Vec<Action>) {
         match self.phase {
             Phase::Generation { frames_left } => {
@@ -144,6 +143,7 @@ impl Game {
                     self.next_piece(piece);
                     self.start_fall();
                     self.can_hold = true;
+                    self.lockdown_moves = LOCKDOWN_MOVES;
                 } else {
                     self.phase = Phase::Generation {
                         frames_left: frames_left - 1,
@@ -151,7 +151,7 @@ impl Game {
                 }
             }
             Phase::Falling { mut timer } => {
-                self.process_input(user_actions);
+                self.process_input(&user_actions);
                 if let Phase::Falling { timer: new_timer } = self.phase {
                     timer = new_timer;
                 }
@@ -179,18 +179,18 @@ impl Game {
                     self.phase = Phase::Completion;
                     self.lockdown_timer = LOCKDOWN_START;
                 } else {
-                    self.process_input(user_actions);
+                    self.process_input(&user_actions);
                     if self.board.can_move_down(&mut self.piece) {
                         self.start_fall();
                     } else {
-                        self.lockdown_timer -= 1;
+                        self.lockdown_timer = self.lockdown_timer.saturating_sub(1);
                     }
                 }
             }
             Phase::Completion => {
                 let rows = self.board.clear_lines();
                 if rows != 0 {
-                    self.score += self.level as u32
+                    self.score += u32::from(self.level)
                         * match rows {
                             1 => 100,
                             2 => 300,
@@ -211,44 +211,41 @@ impl Game {
 }
 
 impl Game {
-    fn process_input(&mut self, actions: Vec<Action>) {
-        for action in actions.iter() {
+    fn process_input(&mut self, actions: &[Action]) {
+        for action in actions {
             match action {
                 Action::Left => {
                     let move_success = self.move_x(-1);
-                    self.movement(move_success)
+                    self.movement(move_success);
                 }
                 Action::Right => {
                     let move_success = self.move_x(1);
-                    self.movement(move_success)
+                    self.movement(move_success);
                 }
                 Action::Cw => {
                     let move_success = self.rotate(Direction::Cw);
-                    self.movement(move_success)
+                    self.movement(move_success);
                 }
                 Action::Ccw => {
                     let move_success = self.rotate(Direction::Ccw);
-                    self.movement(move_success)
+                    self.movement(move_success);
                 }
                 Action::Hold => {
                     if !self.can_hold {
                         continue;
                     }
                     self.can_hold = false;
-                    match &self.hold {
-                        None => {
-                            self.hold = Some(Tetrimino::new(self.piece.kind, 0, 0));
-                            let piece = self.get_next_piece();
-                            self.next_piece(piece);
-                        }
-                        Some(_) => {
-                            let piece = mem::replace(
-                                &mut self.hold,
-                                Some(Tetrimino::new(self.piece.kind, 0, 0)),
-                            );
+                    if self.hold.is_none() {
+                        self.hold = Some(Tetrimino::new(self.piece.kind, 0, 0));
+                        let piece = self.get_next_piece();
+                        self.next_piece(piece);
+                    } else {
+                        let piece = mem::replace(
+                            &mut self.hold,
+                            Some(Tetrimino::new(self.piece.kind, 0, 0)),
+                        );
 
-                            self.next_piece(piece.unwrap());
-                        }
+                        self.next_piece(piece.unwrap());
                     }
                 }
                 Action::HardDrop => {
@@ -292,6 +289,9 @@ impl Game {
             self.lockdown_timer = LOCKDOWN_START;
             self.lockdown_moves -= 1;
         }
+        if self.lockdown_moves == 0 {
+            self.lockdown_timer = 0;
+        }
     }
 
     fn move_x(&mut self, offset: i8) -> bool {
@@ -309,7 +309,7 @@ impl Game {
     fn update_ghost(&mut self) {
         let mut clone = self.piece.clone();
         self.board.drop(&mut clone);
-        self.ghost = clone
+        self.ghost = clone;
     }
 
     fn next_kind(&mut self) -> Mino {
@@ -339,7 +339,7 @@ impl Game {
     }
 
     fn next_piece(&mut self, mut piece: Tetrimino) {
-        Game::place_next_piece(&mut piece);
+        Self::place_next_piece(&mut piece);
         if !self.board.can_place(&piece) {
             return self.gameover();
         }
@@ -369,6 +369,7 @@ impl Game {
         piece
     }
 
+    #[allow(clippy::pedantic)]
     fn gameover(&self) {
         alert("Verloren");
     }

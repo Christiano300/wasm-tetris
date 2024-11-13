@@ -38,3 +38,13 @@ debug = true
 [features]
 # default = ["console_error_panic_hook", "wee_alloc"]
 default = ["console_error_panic_hook"]
+
+[lints.clippy]
+enum_glob_use = { level = "warn", priority = 1 }
+pedantic = "warn"
+nursery = "warn"
+cast_possible_truncation = { level = "allow", priority = 1 }
+cast_sign_loss = { level = "allow", priority = 1 }
+cast_possible_wrap = { level = "allow", priority = 1 }
+cast_precision_loss = { level = "allow", priority = 1 }
+suboptimal_flops = { level = "allow", priority = 1 }
