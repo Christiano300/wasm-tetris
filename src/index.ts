@@ -1,5 +1,7 @@
 import init, { Action, FrameInputs, Game, init_panic_hook } from "lib";
 
+import { generateAuthToken } from "./auth";
+
 await init({
   module_or_path: "/assets/lib_bg.wasm",
 });
@@ -25,7 +27,7 @@ const ctx = canvas?.getContext("2d");
 if (!ctx) {
   throw new Error("Canvas not found");
 }
-const game = new Game(ctx);
+const game = new Game(ctx, generateAuthToken);
 
 window.addEventListener("keydown", (e) => {
   const action = keyMap[e.key];

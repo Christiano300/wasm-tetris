@@ -24,6 +24,8 @@ features = [
   'HtmlImageElement',
   'OffscreenCanvas',
   'OffscreenCanvasRenderingContext2d',
+  'Window',
+  'RequestInit',
 ]
 
 

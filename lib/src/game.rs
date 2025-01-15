@@ -6,9 +6,10 @@ use crate::{
     input::{Action, FrameInputs, InputManager},
     types::{Board, Direction, Mino, Tetrimino},
 };
+use js_sys::Function;
 use rand::Rng;
 use wasm_bindgen::prelude::*;
-use web_sys::CanvasRenderingContext2d;
+use web_sys::{window, CanvasRenderingContext2d, RequestInit};
 
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
@@ -32,6 +33,7 @@ pub struct Game {
     bag: [Mino; 7],
     bag_idx: usize,
     next_queue: VecDeque<Tetrimino>,
+    auth_func: Function,
     context: Rc<CanvasRenderingContext2d>,
     drawing_context: DrawingContext,
     hold: Option<Tetrimino>,
@@ -47,8 +49,9 @@ pub struct Game {
 #[wasm_bindgen]
 impl Game {
     #[wasm_bindgen(constructor)]
-    pub fn new(context: CanvasRenderingContext2d) -> Self {
+    pub fn new(context: CanvasRenderingContext2d, auth_func: Function) -> Self {
         let mut new = Self {
+            auth_func,
             board: Board::default(),
             piece: Tetrimino::new(Mino::I, 0, 0),
             ghost: Tetrimino::new(Mino::I, 0, 0),
@@ -368,5 +371,20 @@ impl Game {
     #[allow(clippy::pedantic)]
     fn gameover(&self) {
         alert("Verloren");
+        let token = self
+            .auth_func
+            .call0(&JsValue::UNDEFINED)
+            .expect("Auth function threw an error")
+            .as_string()
+            .expect("Auth function returned non-string");
+        let options = RequestInit::new();
+        options.set_method("POST");
+        options.set_body(&JsValue::from_str(&format!(
+            "{{\"score\": {score}, \"auth\": {token}}}",
+            score = self.score
+        )));
+        let _ = window()
+            .unwrap()
+            .fetch_with_str_and_init("https://tetris.patzl.dev/highscore", &options);
     }
 }
