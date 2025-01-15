@@ -1,4 +1,4 @@
-import init, { Action, Game, init_panic_hook } from "lib";
+import init, { Action, FrameInputs, Game, init_panic_hook } from "lib";
 
 await init({
   module_or_path: "/assets/lib_bg.wasm",
@@ -7,15 +7,15 @@ await init({
 init_panic_hook();
 
 let actions = [] as Action[];
-var downPressed = false;
+const pressedKeys = new Set();
+const keyMap = {ArrowLeft: "left", ArrowRight: "right", ArrowUp: "cw", ArrowDown: "soft_drop", " ": "hard_drop", c: "hold", KeyZ: "ccw"};
+const frameInputs = ["left", "right", "cw", "ccw", "hold", "hard_drop", "soft_drop"];
 
 function update() {
   window.requestAnimationFrame(update);
 
-  if (downPressed) {
-    actions.push(Action.SoftDrop);
-  }
-  game.update(structuredClone(actions));
+  const keys = frameInputs.map((key) => pressedKeys.has(key)) as [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
+  game.update(new FrameInputs(...keys));
   game.draw();
   actions.splice(0, actions.length);
 }
@@ -28,26 +28,16 @@ if (!ctx) {
 const game = new Game(ctx);
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") {
-    actions.push(Action.Left);
-  } else if (e.key === "ArrowRight") {
-    actions.push(Action.Right);
-  } else if (e.key === "ArrowUp") {
-    actions.push(Action.Cw);
-  } else if (e.key === "ArrowDown") {
-    downPressed = true;
-  } else if (e.key === " ") {
-    actions.push(Action.HardDrop);
-  } else if (e.key === "c") {
-    actions.push(Action.Hold);
-  } else if (e.code === "KeyZ") {
-    actions.push(Action.Ccw);
+  const action = keyMap[e.key];
+  if (action) {
+    pressedKeys.add(action);
   }
 });
 
 window.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowDown") {
-    downPressed = false;
+  const action = keyMap[e.key];
+  if (action) {
+    pressedKeys.delete(action);
   }
 });
 

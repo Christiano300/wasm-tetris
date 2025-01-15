@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::wasm_bindgen;
 
 mod draw;
 mod game;
+mod input;
 mod types;
 
 #[wasm_bindgen]

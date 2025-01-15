@@ -3,6 +3,7 @@ use std::{collections::VecDeque, mem, rc::Rc};
 use crate::{
     alert,
     draw::DrawingContext,
+    input::{Action, FrameInputs, InputManager},
     types::{Board, Direction, Mino, Tetrimino},
 };
 use rand::Rng;
@@ -12,17 +13,6 @@ use web_sys::CanvasRenderingContext2d;
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
 const LOCKDOWN_MOVES: u8 = 5;
-
-#[wasm_bindgen]
-pub enum Action {
-    Left,
-    Right,
-    Cw,
-    Ccw,
-    Hold,
-    HardDrop,
-    SoftDrop,
-}
 
 #[derive(Debug, PartialEq, Eq)]
 enum Phase {
@@ -51,6 +41,7 @@ pub struct Game {
     lockdown_moves: u8,
     lockdown_y: i8,
     level_goal: i8,
+    input_manager: InputManager,
 }
 
 #[wasm_bindgen]
@@ -83,6 +74,7 @@ impl Game {
             lockdown_moves: LOCKDOWN_MOVES,
             lockdown_y: 0,
             level_goal: 5,
+            input_manager: InputManager::new(),
         };
         for _ in 0..5 {
             let next_kind = new.next_kind();
@@ -134,8 +126,12 @@ impl Game {
 
     /// Should be called exaclty 60 times a second
     #[wasm_bindgen]
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn update(&mut self, user_actions: Vec<Action>) {
+    pub fn update(&mut self, inputs: FrameInputs) {
+        let frame_actions = self.input_manager.update(inputs);
+        self.user_actions(frame_actions);
+    }
+
+    pub fn user_actions(&mut self, user_actions: Vec<Action>) {
         match self.phase {
             Phase::Generation { frames_left } => {
                 if frames_left == 0 {
