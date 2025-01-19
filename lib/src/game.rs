@@ -1,14 +1,16 @@
 use std::{collections::VecDeque, mem, rc::Rc};
 
 use crate::{
-    alert,
+    confirm,
     draw::DrawingContext,
     input::{Action, FrameInputs, InputManager},
+    prompt,
     types::{Board, Direction, Mino, Tetrimino},
 };
 use js_sys::Function;
 use rand::Rng;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen_test::console_log;
 use web_sys::{window, CanvasRenderingContext2d, RequestInit};
 
 const LOCKDOWN_START: u8 = 30;
@@ -130,10 +132,11 @@ impl Game {
     /// Should be called exaclty 60 times a second
     #[wasm_bindgen]
     pub fn update(&mut self, inputs: FrameInputs) {
-        let frame_actions = self.input_manager.update(inputs);
+        let frame_actions = self.input_manager.update(&inputs);
         self.user_actions(frame_actions);
     }
 
+    #[allow(clippy::pedantic)]
     pub fn user_actions(&mut self, user_actions: Vec<Action>) {
         match self.phase {
             Phase::Generation { frames_left } => {
@@ -370,7 +373,19 @@ impl Game {
 
     #[allow(clippy::pedantic)]
     fn gameover(&self) {
-        alert("Verloren");
+        let window = window().unwrap();
+        let location = window.location();
+        if !confirm("You lost!, do you want to share your score?") {
+            let _ = location.reload();
+            return;
+        }
+        let name = match prompt("Enter your name for the leaderboard:") {
+            Some(name) => name,
+            None => {
+                let _ = location.reload();
+                return;
+            }
+        };
         let token = self
             .auth_func
             .call0(&JsValue::UNDEFINED)
@@ -380,11 +395,13 @@ impl Game {
         let options = RequestInit::new();
         options.set_method("POST");
         options.set_body(&JsValue::from_str(&format!(
-            "{{\"score\": {score}, \"auth\": {token}}}",
+            "{{\"score\": {score}, \"auth\": \"{token}\", \"name\": \"{name}\"}}",
             score = self.score
         )));
-        let _ = window()
-            .unwrap()
-            .fetch_with_str_and_init("https://tetris.patzl.dev/highscore", &options);
+        let _ = window
+            .fetch_with_str_and_init("https://tetris.patzl.dev/highscore", &options)
+            .then(&Closure::new(move |_| {
+                let _ = location.reload();
+            }));
     }
 }

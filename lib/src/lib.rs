@@ -14,4 +14,10 @@ pub fn init_panic_hook() {
 extern "C" {
     #[wasm_bindgen]
     fn alert(s: &str);
+
+    #[wasm_bindgen]
+    fn confirm(message: &str) -> bool;
+
+    #[wasm_bindgen]
+    fn prompt(message: &str) -> Option<String>;
 }

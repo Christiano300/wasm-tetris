@@ -25,6 +25,7 @@ features = [
   'OffscreenCanvas',
   'OffscreenCanvasRenderingContext2d',
   'Window',
+  'Location',
   'RequestInit',
 ]
 

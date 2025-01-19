@@ -68,7 +68,7 @@ macro_rules! input {
 }
 
 impl InputManager {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             left_frames: 0,
             right_frames: 0,
@@ -77,7 +77,7 @@ impl InputManager {
         }
     }
 
-    pub fn update(&mut self, inputs: FrameInputs) -> Vec<Action> {
+    pub fn update(&mut self, inputs: &FrameInputs) -> Vec<Action> {
         let mut actions = vec![];
 
         input!(inputs.left, self.left_frames, actions, Left);
@@ -91,7 +91,7 @@ impl InputManager {
             actions.push(Action::Hold);
         }
         if inputs.hard_drop {
-            actions.push(Action::HardDrop)
+            actions.push(Action::HardDrop);
         } else if inputs.soft_drop {
             actions.push(Action::SoftDrop);
         }
