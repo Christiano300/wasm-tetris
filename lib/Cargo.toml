@@ -27,6 +27,7 @@ features = [
   'Window',
   'Location',
   'RequestInit',
+  'Headers',
 ]
 
 

@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 
 const DAS_DELAY: u8 = 15;
 #[wasm_bindgen]
+#[derive(PartialEq, Eq)]
 pub enum Action {
     Left,
     Right,
@@ -84,9 +85,6 @@ impl InputManager {
 
         input!(inputs.right, self.right_frames, actions, Right);
 
-        if inputs.ccw {
-            actions.push(Action::Ccw);
-        }
         if inputs.hold {
             actions.push(Action::Hold);
         }

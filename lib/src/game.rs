@@ -10,8 +10,7 @@ use crate::{
 use js_sys::Function;
 use rand::Rng;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_test::console_log;
-use web_sys::{window, CanvasRenderingContext2d, RequestInit};
+use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
 
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
@@ -46,6 +45,7 @@ pub struct Game {
     lockdown_y: i8,
     level_goal: i8,
     input_manager: InputManager,
+    reload_closure: Closure<dyn FnMut(JsValue)>,
 }
 
 #[wasm_bindgen]
@@ -80,6 +80,9 @@ impl Game {
             lockdown_y: 0,
             level_goal: 5,
             input_manager: InputManager::new(),
+            reload_closure: Closure::new(|_| {
+                let _ = window().unwrap().location().reload();
+            }),
         };
         for _ in 0..5 {
             let next_kind = new.next_kind();
@@ -161,6 +164,9 @@ impl Game {
                     return;
                 }
                 if timer == 0 {
+                    if user_actions.contains(&Action::SoftDrop) {
+                        self.score += self.level as u32;
+                    }
                     self.board.move_down(&mut self.piece);
                     if self.piece.offset_y > self.lockdown_y {
                         self.lockdown_y = self.piece.offset_y;
@@ -196,7 +202,7 @@ impl Game {
                         * match rows {
                             1 => 100,
                             2 => 300,
-                            3 => 500,
+                            3 => 550,
                             4 => 800,
                             _ => 0,
                         }
@@ -394,14 +400,15 @@ impl Game {
             .expect("Auth function returned non-string");
         let options = RequestInit::new();
         options.set_method("POST");
+        let headers = Headers::new().unwrap();
+        let _ = headers.set("Content-Type", "application/json");
+        options.set_headers(&JsValue::from(headers));
         options.set_body(&JsValue::from_str(&format!(
             "{{\"score\": {score}, \"auth\": \"{token}\", \"name\": \"{name}\"}}",
             score = self.score
         )));
         let _ = window
             .fetch_with_str_and_init("https://tetris.patzl.dev/highscore", &options)
-            .then(&Closure::new(move |_| {
-                let _ = location.reload();
-            }));
+            .then(&self.reload_closure);
     }
 }

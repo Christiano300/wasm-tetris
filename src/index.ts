@@ -10,14 +10,25 @@ init_panic_hook();
 
 let actions = [] as Action[];
 const pressedKeys = new Set();
-const keyMap = {ArrowLeft: "left", ArrowRight: "right", ArrowUp: "cw", ArrowDown: "soft_drop", " ": "hard_drop", c: "hold", KeyZ: "ccw"};
+const keyMap = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "cw", ArrowDown: "soft_drop", " ": "hard_drop", c: "hold", z: "ccw", a: "left", d: "right", s: "soft_drop", j: "ccw", l: "cw", k: "hold" };
 const frameInputs = ["left", "right", "cw", "ccw", "hold", "hard_drop", "soft_drop"];
+const fpsInterval = 1000 / 60;
 
-function update() {
+var then = window.performance.now();
+
+function update(newtime: number) {
   window.requestAnimationFrame(update);
 
+  let elapsed = newtime - then;
+
   const keys = frameInputs.map((key) => pressedKeys.has(key)) as [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
-  game.update(new FrameInputs(...keys));
+  while (elapsed > fpsInterval) {
+    game.update(new FrameInputs(...keys));
+    elapsed -= fpsInterval;
+  }
+
+  then = newtime - elapsed;
+
   game.draw();
   actions.splice(0, actions.length);
 }
@@ -43,4 +54,4 @@ window.addEventListener("keyup", (e) => {
   }
 });
 
-update();
+requestAnimationFrame(update);
