@@ -46,6 +46,7 @@ pub struct Game {
     level_goal: i8,
     input_manager: InputManager,
     reload_closure: Closure<dyn FnMut(JsValue)>,
+    done: bool,
 }
 
 #[wasm_bindgen]
@@ -83,6 +84,7 @@ impl Game {
             reload_closure: Closure::new(|_| {
                 let _ = window().unwrap().location().reload();
             }),
+            done: false,
         };
         for _ in 0..5 {
             let next_kind = new.next_kind();
@@ -378,7 +380,11 @@ impl Game {
     }
 
     #[allow(clippy::pedantic)]
-    fn gameover(&self) {
+    fn gameover(&mut self) {
+        if self.done {
+            return;
+        }
+        self.done = true;
         let window = window().unwrap();
         let location = window.location();
         if !confirm("You lost!, do you want to share your score?") {
@@ -394,7 +400,13 @@ impl Game {
         };
         let token = self
             .auth_func
-            .call0(&JsValue::UNDEFINED)
+            .call1(
+                &JsValue::UNDEFINED,
+                &JsValue::from_str(&format!(
+                    "{:o} fffffffff {} esiovtb3w5iothbiouthes0u",
+                    self.score, name
+                )),
+            )
             .expect("Auth function threw an error")
             .as_string()
             .expect("Auth function returned non-string");

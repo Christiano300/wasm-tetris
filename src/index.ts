@@ -11,7 +11,7 @@ init_panic_hook();
 let actions = [] as Action[];
 const pressedKeys = new Set();
 const keyMap = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "cw", ArrowDown: "soft_drop", " ": "hard_drop", c: "hold", z: "ccw", a: "left", d: "right", s: "soft_drop", j: "ccw", l: "cw", k: "hold" };
-const frameInputs = ["left", "right", "cw", "ccw", "hold", "hard_drop", "soft_drop"];
+const controls = ["left", "right", "cw", "ccw", "hold", "hard_drop", "soft_drop"];
 const fpsInterval = 1000 / 60;
 
 var then = window.performance.now();
@@ -21,7 +21,7 @@ function update(newtime: number) {
 
   let elapsed = newtime - then;
 
-  const keys = frameInputs.map((key) => pressedKeys.has(key)) as [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
+  const keys = controls.map((key) => pressedKeys.has(key)) as [boolean, boolean, boolean, boolean, boolean, boolean, boolean];
   while (elapsed > fpsInterval) {
     game.update(new FrameInputs(...keys));
     elapsed -= fpsInterval;
