@@ -14,6 +14,7 @@ pub enum Action {
 }
 
 #[wasm_bindgen]
+#[allow(clippy::struct_excessive_bools)]
 pub struct FrameInputs {
     left: bool,
     right: bool,
@@ -27,6 +28,7 @@ pub struct FrameInputs {
 #[wasm_bindgen]
 impl FrameInputs {
     #[wasm_bindgen(constructor)]
+    #[allow(clippy::nursery, clippy::pedantic)]
     pub fn new(
         left: bool,
         right: bool,

@@ -15,6 +15,7 @@ use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
 const LOCKDOWN_MOVES: u8 = 5;
+const LEVEL_GOAL: i8 = 1;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Phase {
@@ -79,7 +80,7 @@ impl Game {
             lockdown_timer: LOCKDOWN_START,
             lockdown_moves: LOCKDOWN_MOVES,
             lockdown_y: 0,
-            level_goal: 5,
+            level_goal: LEVEL_GOAL,
             input_manager: InputManager::new(),
             reload_closure: Closure::new(|_| {
                 let _ = window().unwrap().location().reload();
@@ -97,8 +98,8 @@ impl Game {
 
     #[wasm_bindgen]
     pub fn draw(&self) {
-        const BOARD_X: f64 = 300.;
-        const BOARD_Y: f64 = 20.;
+        const BOARD_X: f64 = 160.;
+        const BOARD_Y: f64 = 60.;
         self.drawing_context
             .draw_board(&self.context, BOARD_X, BOARD_Y);
         self.drawing_context.draw_field(
@@ -126,16 +127,21 @@ impl Game {
             );
         }
 
-        DrawingContext::draw_score(&self.context, self.score, 20., 20.);
+        DrawingContext::draw_score(&self.context, self.score, BOARD_X, 20.);
         self.drawing_context
-            .draw_hold(&self.context, self.hold.as_ref(), 20., 120.);
-        self.drawing_context
-            .draw_queue(&self.context, self.next_queue.iter(), 700., 20.);
-        DrawingContext::draw_level(&self.context, self.level, 20., 200.);
+            .draw_hold(&self.context, self.hold.as_ref(), 20., BOARD_Y);
+        self.drawing_context.draw_queue(
+            &self.context,
+            self.next_queue.iter(),
+            BOARD_X + 350.,
+            BOARD_Y,
+        );
+        DrawingContext::draw_level(&self.context, self.level, BOARD_X + 320., 20.);
     }
 
     /// Should be called exaclty 60 times a second
     #[wasm_bindgen]
+    #[allow(clippy::pedantic)]
     pub fn update(&mut self, inputs: FrameInputs) {
         let frame_actions = self.input_manager.update(&inputs);
         self.user_actions(frame_actions);
@@ -212,7 +218,7 @@ impl Game {
                 self.level_goal -= rows as i8;
                 if self.level_goal <= 0 {
                     self.level += 1;
-                    self.level_goal += 5;
+                    self.level_goal += LEVEL_GOAL;
                 }
                 self.phase = Phase::Generation { frames_left: 12 };
             }
@@ -276,7 +282,7 @@ impl Game {
         }
     }
 
-    fn start_fall(&mut self) {
+    const fn start_fall(&mut self) {
         self.phase = Phase::Falling {
             timer: match self.level {
                 1 => 30,
@@ -337,7 +343,7 @@ impl Game {
         self.bag[0]
     }
 
-    fn place_next_piece(tetrimino: &mut Tetrimino) {
+    const fn place_next_piece(tetrimino: &mut Tetrimino) {
         let (x, y) = match tetrimino.kind {
             Mino::Empty => (0, 0),
             Mino::O => (4, 18),

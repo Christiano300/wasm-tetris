@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     CanvasRenderingContext2d, OffscreenCanvas, OffscreenCanvasRenderingContext2d as CanvasContext,
 };
@@ -53,19 +53,19 @@ impl DrawingContext {
     fn make_mino(base_color: Color) -> SubImage {
         SubImage::new(30, 30, |ctx| {
             let gradient = ctx.create_linear_gradient(0., 0., 0., 30.);
-            let _ = gradient.add_color_stop(1., &base_color.lighten(0.3).to_rgb());
-            let _ = gradient.add_color_stop(0., &base_color.lighten(0.7).to_rgb());
+            let _ = gradient.add_color_stop(1., &base_color.lighten(0.3).to_css_color());
+            let _ = gradient.add_color_stop(0., &base_color.lighten(0.7).to_css_color());
 
             ctx.set_fill_style_canvas_gradient(&gradient);
             ctx.fill_rect(2., 2., 28., 28.);
 
-            ctx.set_stroke_style_str(&base_color.lighten(0.2).darken(0.15).to_rgb());
+            ctx.set_stroke_style_str(&base_color.lighten(0.2).darken(0.15).to_css_color());
             ctx.set_line_width(2.);
             ctx.begin_path();
             let _ = ctx.round_rect_with_f64(2., 2., 27., 27., 2.);
             ctx.stroke();
 
-            ctx.set_stroke_style_str(&base_color.lighten(0.3).darken(0.4).to_rgb());
+            ctx.set_stroke_style_str(&base_color.lighten(0.3).darken(0.4).to_css_color());
             ctx.set_line_width(1.);
             ctx.begin_path();
             let _ = ctx.round_rect_with_f64(1., 1., 29., 29., 2.);
@@ -74,7 +74,7 @@ impl DrawingContext {
     }
 
     fn draw_ghost_mino(ctx: &CanvasContext, base_color: Color) {
-        ctx.set_stroke_style_str(&base_color.lighten(0.7).alpha(50).to_rgb());
+        ctx.set_stroke_style_str(&base_color.lighten(0.7).alpha(50).to_css_color());
         ctx.set_line_width(1.);
         let _ = ctx.round_rect_with_f64(1., 1., 29., 29., 2.);
         ctx.stroke();
@@ -86,14 +86,14 @@ impl DrawingContext {
         SubImage::new(width, height, |ctx| {
             let width = f64::from(width);
             let height = f64::from(height);
-            ctx.set_fill_style_str(&Color::no_alpha(40, 40, 40).to_rgb());
+            ctx.set_fill_style_str(&Color::no_alpha(40, 40, 40).to_css_color());
             ctx.fill_rect(0., 0., width, height);
 
-            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_rgb());
+            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css_color());
             ctx.set_line_width(5.);
             ctx.stroke_rect(2., 2., width - 4., height - 4.);
 
-            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_rgb());
+            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css_color());
             ctx.set_line_width(0.5);
             ctx.begin_path();
             for i in 0..=10 {
@@ -112,7 +112,7 @@ impl DrawingContext {
     }
 
     pub fn draw_board(&self, ctx: &CanvasRenderingContext2d, off_x: f64, off_y: f64) {
-        let _ = ctx.draw_image_with_offscreen_canvas(&self.board.canvas, off_x, off_y);
+        let _ = self.board.draw(ctx, off_x, off_y);
     }
 
     const fn get_mino_image(&self, kind: Mino) -> Option<&SubImage> {
@@ -141,11 +141,7 @@ impl DrawingContext {
                 let Some(image) = self.get_mino_image(mino) else {
                     continue;
                 };
-                let _ = ctx.draw_image_with_offscreen_canvas(
-                    &image.canvas,
-                    (col as f64) * 31. + off_x,
-                    (row as f64) * 31. + off_y,
-                );
+                let _ = image.draw(ctx, (col as f64) * 31. + off_x, (row as f64) * 31. + off_y);
             }
         }
     }
@@ -169,7 +165,6 @@ impl DrawingContext {
             };
             image
         };
-        let image = &image.canvas;
         for (y, row) in tetrimino.grid.iter().enumerate() {
             for (x, mino) in row.iter().enumerate() {
                 if *mino {
@@ -183,17 +178,17 @@ impl DrawingContext {
                     } else {
                         (y + tetrimino.offset_y as usize - 20) as f64 * 31. + off_y
                     };
-                    let _ = ctx.draw_image_with_offscreen_canvas(image, dx, dy);
+                    let _ = image.draw(ctx, dx, dy);
                 }
             }
         }
     }
 
     pub fn draw_score(ctx: &CanvasRenderingContext2d, score: u32, x: f64, y: f64) {
-        ctx.clear_rect(x, y, 240., 50.);
+        ctx.clear_rect(x, y, 240., 30.);
         ctx.set_fill_style_str("#000");
         ctx.set_text_baseline("top");
-        ctx.set_font("30px sans-serif");
+        ctx.set_font("25px sans-serif");
         let _ = ctx.fill_text_with_max_width(&format!("Score: {score}"), x, y, 240.);
     }
 
@@ -211,11 +206,14 @@ impl DrawingContext {
     }
 
     pub fn draw_level(ctx: &CanvasRenderingContext2d, level: u8, x: f64, y: f64) {
-        ctx.clear_rect(x, y, 240., 40.);
+        let text_width = 100.;
+        ctx.clear_rect(x - text_width, y, text_width, 30.);
         ctx.set_fill_style_str("#000");
         ctx.set_text_baseline("top");
-        ctx.set_font("30px sans-serif");
-        let _ = ctx.fill_text_with_max_width(&format!("Level: {level}"), x, y, 240.);
+        ctx.set_font("25px sans-serif");
+        ctx.set_text_align("right");
+        let _ = ctx.fill_text(&format!("Level {level} "), x, y);
+        ctx.set_text_align("start");
     }
 
     pub fn draw_queue<'a>(
@@ -252,6 +250,10 @@ impl SubImage {
             canvas: Rc::new(canvas),
         }
     }
+
+    fn draw(&self, ctx: &CanvasRenderingContext2d, x: f64, y: f64) -> Result<(), JsValue> {
+        ctx.draw_image_with_offscreen_canvas(&self.canvas, x, y)
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
@@ -272,7 +274,7 @@ impl Color {
         }
     }
 
-    fn to_rgb(self) -> String {
+    fn to_css_color(self) -> String {
         self.alpha.map_or_else(
             || format!("#{:x}{:x}{:x}", self.r, self.g, self.b),
             |alpha| format!("rgb({} {} {} / {alpha}%)", self.r, self.g, self.b),
