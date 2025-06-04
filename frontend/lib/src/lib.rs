@@ -1,9 +1,8 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 
 mod draw;
-mod game;
 mod input;
-mod types;
+mod instance;
 
 #[wasm_bindgen]
 pub fn init_panic_hook() {
@@ -15,9 +14,9 @@ extern "C" {
     #[wasm_bindgen]
     fn alert(s: &str);
 
-    #[wasm_bindgen]
-    fn confirm(message: &str) -> bool;
+    #[wasm_bindgen(js_namespace = globalThis)]
+    fn tetris_confirm(message: &str) -> bool;
 
-    #[wasm_bindgen]
-    fn prompt(message: &str) -> Option<String>;
+    #[wasm_bindgen(js_namespace = globalThis)]
+    fn tetris_prompt(message: &str) -> Option<String>;
 }

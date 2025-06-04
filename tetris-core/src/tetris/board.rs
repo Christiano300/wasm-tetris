@@ -1,7 +1,5 @@
-use core::panic;
-
 #[repr(u8)]
-#[derive(Default, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum Mino {
     #[default]
     Empty,
@@ -12,6 +10,7 @@ pub enum Mino {
     S,
     Z,
     T,
+    Garbage,
 }
 
 #[repr(u8)]
@@ -59,6 +58,7 @@ pub enum Direction {
     Ccw,
 }
 
+#[derive(Debug)]
 pub struct Board {
     pub buffer: [[Mino; 10]; 40],
 }
@@ -134,11 +134,11 @@ impl Board {
     pub fn rotate(&self, tetrimino: &mut Tetrimino, direction: Direction) -> bool {
         let to = tetrimino.rotation.rotate(direction);
         let offsets = match tetrimino.kind {
-            Mino::O | Mino::Empty => return true,
             Mino::J | Mino::L | Mino::S | Mino::Z | Mino::T => {
                 Self::get_three_offsets(tetrimino.rotation, to)
             }
             Mino::I => Self::get_i_offsets(tetrimino.rotation, to),
+            _ => return true,
         };
 
         let mut clone = tetrimino.clone();
@@ -226,11 +226,36 @@ impl Board {
         }
         count
     }
+
+    /// Returns if would be gameover
+    pub fn push_up(&mut self, amount: u8) -> bool {
+        let amount = amount as usize;
+        for i in 0..amount {
+            if self.buffer[i].iter().any(|x| *x != Mino::Empty) {
+                return true;
+            }
+        }
+
+        for i in 0..(40 - amount) {
+            for j in 0..10 {
+                self.buffer[i][j] = self.buffer[i + amount][j];
+            }
+        }
+        false
+    }
+
+    pub fn add_garbage(&mut self, row: u8, slot: u8) {
+        let row = row as usize;
+        for i in 0..10 {
+            self.buffer[row][i] = Mino::Garbage;
+        }
+        self.buffer[row][slot as usize] = Mino::Empty;
+    }
 }
 
 /// Represents a Tetrimino currently being dropped, or a ghost, or a "shadow" used for rotation
 /// testing or in the preview queue
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Tetrimino {
     pub kind: Mino,
     pub rotation: Rotation,
@@ -247,7 +272,7 @@ impl Tetrimino {
             offset_x: x,
             offset_y: y,
             grid: match kind {
-                Mino::Empty => panic!("Tried to create an empty Tetrimino"),
+                Mino::Empty | Mino::Garbage => vec![],
                 Mino::O => vec![vec![true, true], vec![true, true]],
                 Mino::I => vec![
                     vec![false, false, false, false],

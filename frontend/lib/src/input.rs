@@ -1,18 +1,7 @@
+use tetris_core::tetris::Action;
 use wasm_bindgen::prelude::*;
 
 const DAS_DELAY: u8 = 15;
-#[wasm_bindgen]
-#[derive(PartialEq, Eq)]
-pub enum Action {
-    Left,
-    Right,
-    Cw,
-    Ccw,
-    Hold,
-    HardDrop,
-    SoftDrop,
-}
-
 #[wasm_bindgen]
 #[allow(clippy::struct_excessive_bools)]
 pub struct FrameInputs {

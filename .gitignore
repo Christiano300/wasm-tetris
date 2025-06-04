@@ -1,5 +1,1 @@
-node_modules/
-lib/pkg/
-lib/target/
-dist/
-src/auth.js
+target/

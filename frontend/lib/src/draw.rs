@@ -5,7 +5,7 @@ use web_sys::{
     CanvasRenderingContext2d, OffscreenCanvas, OffscreenCanvasRenderingContext2d as CanvasContext,
 };
 
-use crate::types::{Mino, Tetrimino};
+use tetris_core::tetris::{Mino, Tetrimino};
 
 const fn get_base_color(kind: Mino) -> Color {
     match kind {
@@ -15,6 +15,7 @@ const fn get_base_color(kind: Mino) -> Color {
             b: 0,
             alpha: None,
         },
+        Mino::Garbage => Color::no_alpha(100, 100, 100),
         Mino::I => Color::no_alpha(0, 200, 255),
         Mino::O => Color::no_alpha(255, 255, 0),
         Mino::T => Color::no_alpha(127, 0, 127),
@@ -33,10 +34,15 @@ pub struct DrawingContext {
     z: SubImage,
     j: SubImage,
     l: SubImage,
+    garbage: SubImage,
     board: SubImage,
 }
 
 impl DrawingContext {
+    pub fn clear(&self, ctx: &CanvasRenderingContext2d) {
+        ctx.clear_rect(0., 0., 1000., 700.);
+    }
+
     pub fn new() -> Self {
         Self {
             i: Self::make_mino(get_base_color(Mino::I)),
@@ -46,6 +52,7 @@ impl DrawingContext {
             z: Self::make_mino(get_base_color(Mino::Z)),
             j: Self::make_mino(get_base_color(Mino::J)),
             l: Self::make_mino(get_base_color(Mino::L)),
+            garbage: Self::make_mino(get_base_color(Mino::Garbage)),
             board: Self::make_board(),
         }
     }
@@ -118,6 +125,7 @@ impl DrawingContext {
     const fn get_mino_image(&self, kind: Mino) -> Option<&SubImage> {
         Some(match kind {
             Mino::Empty => return None,
+            Mino::Garbage => &self.garbage,
             Mino::I => &self.i,
             Mino::O => &self.o,
             Mino::J => &self.j,

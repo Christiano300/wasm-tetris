@@ -1,61 +1,64 @@
-use std::{collections::VecDeque, mem, rc::Rc};
-
-use crate::{
-    confirm,
-    draw::DrawingContext,
-    input::{Action, FrameInputs, InputManager},
-    prompt,
-    types::{Board, Direction, Mino, Tetrimino},
-};
-use js_sys::Function;
 use rand::Rng;
-use wasm_bindgen::prelude::*;
-use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
+use std::{collections::VecDeque, mem};
+
+use super::{Board, Direction, Mino, Tetrimino};
 
 const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
 const LOCKDOWN_MOVES: u8 = 5;
-const LEVEL_GOAL: i8 = 1;
+const LEVEL_GOAL: i8 = 5;
+
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub enum Event {
+    Completion(u8),
+    Gameover,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum Action {
+    Left,
+    Right,
+    Cw,
+    Ccw,
+    Hold,
+    HardDrop,
+    SoftDrop,
+}
 
 #[derive(Debug, PartialEq, Eq)]
-enum Phase {
+pub enum Phase {
     Generation { frames_left: u8 },
     Falling { timer: u8 },
     Lock,
     Completion,
 }
 
-#[wasm_bindgen]
+#[derive(Debug)]
 pub struct Game {
-    board: Board,
-    piece: Tetrimino,
-    ghost: Tetrimino,
-    score: u32,
-    level: u8,
+    pub board: Board,
+    pub piece: Tetrimino,
+    pub ghost: Tetrimino,
+    pub score: u32,
+    pub level: u8,
     bag: [Mino; 7],
     bag_idx: usize,
-    next_queue: VecDeque<Tetrimino>,
-    auth_func: Function,
-    context: Rc<CanvasRenderingContext2d>,
-    drawing_context: DrawingContext,
-    hold: Option<Tetrimino>,
+    pub next_queue: VecDeque<Tetrimino>,
+    pub hold: Option<Tetrimino>,
     can_hold: bool,
-    phase: Phase,
+    pub phase: Phase,
     lockdown_timer: u8,
     lockdown_moves: u8,
     lockdown_y: i8,
     level_goal: i8,
-    input_manager: InputManager,
-    reload_closure: Closure<dyn FnMut(JsValue)>,
-    done: bool,
+    pub done: bool,
+    pub garbage_slot: u8,
+    pub garbage_acc: u8,
+    pub events: Vec<Event>,
 }
 
-#[wasm_bindgen]
 impl Game {
-    #[wasm_bindgen(constructor)]
-    pub fn new(context: CanvasRenderingContext2d, auth_func: Function) -> Self {
+    pub fn new() -> Self {
         let mut new = Self {
-            auth_func,
             board: Board::default(),
             piece: Tetrimino::new(Mino::I, 0, 0),
             ghost: Tetrimino::new(Mino::I, 0, 0),
@@ -71,8 +74,6 @@ impl Game {
             ],
             next_queue: VecDeque::with_capacity(5),
             bag_idx: 7,
-            context: Rc::new(context),
-            drawing_context: DrawingContext::new(),
             hold: None,
             can_hold: true,
             level: 1,
@@ -81,12 +82,14 @@ impl Game {
             lockdown_moves: LOCKDOWN_MOVES,
             lockdown_y: 0,
             level_goal: LEVEL_GOAL,
-            input_manager: InputManager::new(),
-            reload_closure: Closure::new(|_| {
-                let _ = window().unwrap().location().reload();
-            }),
             done: false,
+            events: vec![],
+            garbage_slot: 0,
+            garbage_acc: 0,
         };
+        let mut rng = rand::rng();
+        new.garbage_slot = rng.random_range(1..9);
+
         for _ in 0..5 {
             let next_kind = new.next_kind();
             new.next_queue.push_back(Tetrimino::new(next_kind, 0, 0));
@@ -96,59 +99,8 @@ impl Game {
         new
     }
 
-    #[wasm_bindgen]
-    pub fn draw(&self) {
-        const BOARD_X: f64 = 160.;
-        const BOARD_Y: f64 = 60.;
-        self.drawing_context
-            .draw_board(&self.context, BOARD_X, BOARD_Y);
-        self.drawing_context.draw_field(
-            &self.context,
-            &self.board.buffer,
-            BOARD_X + 5.,
-            BOARD_Y + 5.,
-        );
-        if !matches!(self.phase, Phase::Generation { .. }) {
-            self.drawing_context.draw_tetrimino(
-                &self.context,
-                &self.piece,
-                BOARD_X + 5.,
-                BOARD_Y + 5.,
-                false,
-                false,
-            );
-            self.drawing_context.draw_tetrimino(
-                &self.context,
-                &self.ghost,
-                BOARD_X + 5.,
-                BOARD_Y + 5.,
-                true,
-                false,
-            );
-        }
-
-        DrawingContext::draw_score(&self.context, self.score, BOARD_X, 20.);
-        self.drawing_context
-            .draw_hold(&self.context, self.hold.as_ref(), 20., BOARD_Y);
-        self.drawing_context.draw_queue(
-            &self.context,
-            self.next_queue.iter(),
-            BOARD_X + 350.,
-            BOARD_Y,
-        );
-        DrawingContext::draw_level(&self.context, self.level, BOARD_X + 320., 20.);
-    }
-
-    /// Should be called exaclty 60 times a second
-    #[wasm_bindgen]
-    #[allow(clippy::pedantic)]
-    pub fn update(&mut self, inputs: FrameInputs) {
-        let frame_actions = self.input_manager.update(&inputs);
-        self.user_actions(frame_actions);
-    }
-
-    #[allow(clippy::pedantic)]
     pub fn user_actions(&mut self, user_actions: Vec<Action>) {
+        self.events.clear();
         match self.phase {
             Phase::Generation { frames_left } => {
                 if frames_left == 0 {
@@ -205,28 +157,45 @@ impl Game {
             }
             Phase::Completion => {
                 let rows = self.board.clear_lines();
-                if rows != 0 {
-                    self.score += u32::from(self.level)
-                        * match rows {
-                            1 => 100,
-                            2 => 300,
-                            3 => 550,
-                            4 => 800,
-                            _ => 0,
-                        }
-                }
+                self.score += u32::from(self.level)
+                    * match rows {
+                        1 => 100,
+                        2 => 300,
+                        3 => 550,
+                        4 => 800,
+                        _ => 0,
+                    };
+                self.events.push(Event::Completion(rows));
                 self.level_goal -= rows as i8;
                 if self.level_goal <= 0 {
                     self.level += 1;
                     self.level_goal += LEVEL_GOAL;
                 }
+                self.add_garbage();
                 self.phase = Phase::Generation { frames_left: 12 };
             }
         }
     }
+
+    pub fn accumulate_garbage(&mut self, lines: u8) {
+        self.garbage_acc += lines;
+    }
 }
 
 impl Game {
+    fn add_garbage(&mut self) {
+        self.board.push_up(self.garbage_acc);
+        let mut rng = rand::rng();
+        for i in 0..self.garbage_acc {
+            let layer = 40 - i - 1;
+            self.board.add_garbage(layer, self.garbage_slot);
+            if rng.random_bool(0.3) {
+                self.garbage_slot = rng.random_range(0..10);
+            }
+        }
+        self.garbage_acc = 0;
+    }
+
     fn process_input(&mut self, actions: &[Action]) {
         for action in actions {
             match action {
@@ -243,8 +212,9 @@ impl Game {
                     self.movement(move_success);
                 }
                 Action::Ccw => {
-                    let move_success = self.rotate(Direction::Ccw);
-                    self.movement(move_success);
+                    // let move_success = self.rotate(Direction::Ccw);
+                    // self.movement(move_success);
+                    self.garbage_acc += 1;
                 }
                 Action::Hold => {
                     if !self.can_hold {
@@ -334,9 +304,9 @@ impl Game {
             self.bag_idx += 1;
             return next;
         }
-        let mut rand = rand::thread_rng();
+        let mut rand = rand::rng();
         for i in 0..7 {
-            let swap = rand.gen_range(i..7);
+            let swap = rand.random_range(i..7);
             self.bag.swap(i, swap);
         }
         self.bag_idx = 1;
@@ -345,7 +315,7 @@ impl Game {
 
     const fn place_next_piece(tetrimino: &mut Tetrimino) {
         let (x, y) = match tetrimino.kind {
-            Mino::Empty => (0, 0),
+            Mino::Empty | Mino::Garbage => (0, 0),
             Mino::O => (4, 18),
             Mino::I => (3, 19),
             Mino::L | Mino::J | Mino::S | Mino::Z | Mino::T => (3, 18),
@@ -376,57 +346,20 @@ impl Game {
     }
 
     fn get_next_piece(&mut self) -> Tetrimino {
-        let piece = self
-            .next_queue
-            .pop_front()
-            .expect_throw("Next queue was empty");
+        let piece = self.next_queue.pop_front().expect("Next queue was empty");
         let kind = self.next_kind();
         self.next_queue.push_back(Tetrimino::new(kind, 0, 0));
         piece
     }
 
-    #[allow(clippy::pedantic)]
     fn gameover(&mut self) {
-        if self.done {
-            return;
-        }
         self.done = true;
-        let window = window().unwrap();
-        let location = window.location();
-        if !confirm("You lost!, do you want to share your score?") {
-            let _ = location.reload();
-            return;
-        }
-        let name = match prompt("Enter your name for the leaderboard:") {
-            Some(name) => name,
-            None => {
-                let _ = location.reload();
-                return;
-            }
-        };
-        let token = self
-            .auth_func
-            .call1(
-                &JsValue::UNDEFINED,
-                &JsValue::from_str(&format!(
-                    "{:o} fffffffff {} esiovtb3w5iothbiouthes0u",
-                    self.score, name
-                )),
-            )
-            .expect("Auth function threw an error")
-            .as_string()
-            .expect("Auth function returned non-string");
-        let options = RequestInit::new();
-        options.set_method("POST");
-        let headers = Headers::new().unwrap();
-        let _ = headers.set("Content-Type", "application/json");
-        options.set_headers(&JsValue::from(headers));
-        options.set_body(&JsValue::from_str(&format!(
-            "{{\"score\": {score}, \"auth\": \"{token}\", \"name\": \"{name}\"}}",
-            score = self.score
-        )));
-        let _ = window
-            .fetch_with_str_and_init("https://tetris.patzl.dev/highscore", &options)
-            .then(&self.reload_closure);
+        self.events.push(Event::Gameover);
+    }
+}
+
+impl Default for Game {
+    fn default() -> Self {
+        Game::new()
     }
 }

@@ -3,11 +3,11 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  background-color: #c7e;
 }
 
-body {
+main {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #c7e;
 }
