@@ -63,7 +63,7 @@ impl Instance {
         const BOARD_X: f64 = 160.;
         const BOARD_Y: f64 = 60.;
         let Some(ref game) = *self.game.borrow() else {
-            self.drawing_context.clear(&self.context);
+            DrawingContext::clear(&self.context);
             return;
         };
         self.drawing_context
@@ -125,11 +125,13 @@ impl Instance {
                 Event::Gameover => {
                     let mut game = self.game.borrow_mut();
                     if let Some(ref mut game) = *game {
-                        gameover(self.auth_func.clone(), game.score);
+                        gameover(&self.auth_func, game.score);
                     }
                     *game = None;
-                    if let Some(ref mut session) = *self.session.borrow_mut() {
-                        let _ = session.close().await;
+                    if let Some(mut session) = self.session.borrow_mut().take() {
+                        spawn_local(async move {
+                            let _ = session.close().await;
+                        });
                     }
                     return false;
                 }
@@ -147,7 +149,7 @@ impl Instance {
                 }
             }
         }
-        return true;
+        true
     }
 
     #[wasm_bindgen]
@@ -186,20 +188,18 @@ async fn conn_loop_static(
                 }
             }
             Message::Start => {
-                console_log!("Start game borrow");
                 let try_borrow_mut = game.try_borrow_mut();
                 if let Ok(mut game) = try_borrow_mut {
                     *game = Some(Game::new());
                 } else {
                     console_log!("Cannot set game");
                 }
-                console_log!("Start game borrow end");
             }
         }
     }
 }
 
-fn gameover(auth_func: Function, score: u32) {
+fn gameover(auth_func: &Function, score: u32) {
     let window = window().unwrap();
     if !tetris_confirm("You lost!, do you want to share your score?") {
         return;

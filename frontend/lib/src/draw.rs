@@ -39,7 +39,7 @@ pub struct DrawingContext {
 }
 
 impl DrawingContext {
-    pub fn clear(&self, ctx: &CanvasRenderingContext2d) {
+    pub fn clear(ctx: &CanvasRenderingContext2d) {
         ctx.clear_rect(0., 0., 1000., 700.);
     }
 

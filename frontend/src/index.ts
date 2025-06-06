@@ -13,9 +13,7 @@ globalThis.tetris_prompt = (text: string) => {
   return prompt(text);
 };
 
-await init({
-  module_or_path: "/assets/lib_bg.wasm",
-});
+await init();
 
 init_panic_hook();
 
@@ -46,7 +44,6 @@ const controls = [
 ];
 const fpsInterval = 1000 / 60;
 
-let connect: string | null = null;
 let running = false;
 
 var then = window.performance.now();
@@ -58,10 +55,8 @@ function startGame() {
 }
 
 async function update(newtime: number) {
-  if (running) requestAnimationFrame(update);
-
   let elapsed = newtime - then;
-
+  
   const keys = controls.map((key) => pressedKeys.has(key)) as [
     boolean,
     boolean,
@@ -75,9 +70,9 @@ async function update(newtime: number) {
     running = await game.update(new FrameInputs(...keys));
     elapsed -= fpsInterval;
   }
+  if (running) requestAnimationFrame(update);
 
   then = newtime - elapsed;
-
   game.draw();
 }
 
@@ -92,7 +87,6 @@ window.addEventListener("keydown", (e) => {
   const action = keyMap[e.key];
   if (action) {
     pressedKeys.add(action);
-    console.log(`Key pressed: ${action}`);
   }
 });
 
@@ -100,7 +94,6 @@ window.addEventListener("keyup", (e) => {
   const action = keyMap[e.key];
   if (action) {
     pressedKeys.delete(action);
-    console.log(`Key released: ${action}`);
   }
 });
 
@@ -109,5 +102,11 @@ document.querySelector("button")?.addEventListener("click", async () => {
     return;
   }
   pressedKeys.clear();
-  game.connect((document.getElementById("gameId") as HTMLInputElement).value).then(startGame);
+  try {
+    game
+      .connect((document.getElementById("gameId") as HTMLInputElement).value)
+      .then(startGame);
+  } catch (e) {
+    console.error("Error connecting to game?: ", e);
+  }
 });

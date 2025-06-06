@@ -7,7 +7,6 @@ export default defineConfig({
     target: "esnext",
     minify: "esbuild",
   },
-  resolve: {dedupe: ["vscode"]},
   assetsInclude: "node_modules/lib/*.wasm",
   base: "/tetris"
 });

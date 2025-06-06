@@ -6,13 +6,13 @@ use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use log::info;
 use tokio::{select, sync::Mutex};
 
-use crate::{game::Game, AppState};
+use crate::{game::Game, Games};
 
 static HB_INTERVAL: Duration = Duration::from_secs(5);
 static TIMEOUT: Duration = Duration::from_secs(15);
 
-pub async fn waiting_cancel(session: Session, state: web::Data<AppState>, id: &String) {
-    let mut lock = state.games.lock().await;
+pub async fn waiting_cancel(session: Session, state: web::Data<Games>, id: &String) {
+    let mut lock = state.0.lock().await;
     let mut remove = false;
     if let Some(game) = lock.get(id) {
         let game = game.lock().await;
@@ -26,7 +26,7 @@ pub async fn waiting_cancel(session: Session, state: web::Data<AppState>, id: &S
 }
 
 pub async fn ws_waiting(
-    state: web::Data<AppState>,
+    state: web::Data<Games>,
     id: String,
     mut session: Session,
     mut stream: AggregatedMessageStream,
@@ -73,14 +73,14 @@ pub async fn ws_waiting(
     }
 }
 
-async fn running_cancel(state: web::Data<AppState>, game: Arc<Mutex<Game>>) {
+async fn running_cancel(state: web::Data<Games>, game: Arc<Mutex<Game>>) {
     let mut lock = game.lock().await;
-    state.games.lock().await.remove(lock.get_id());
+    state.0.lock().await.remove(lock.get_id());
     lock.client_timeout().await;
 }
 
 pub async fn ws_running(
-    state: web::Data<AppState>,
+    state: web::Data<Games>,
     game: Arc<Mutex<Game>>,
     player_id: String,
     mut session: Session,

@@ -1,15 +1,20 @@
 use actix_web::web::Bytes;
 use actix_ws::Session;
 use log::warn;
+use serde::Serialize;
 use std::fmt::Debug;
 
 use crate::proto::TetrisSocket;
 use tetris_core::net::Message;
 
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct GameSettings {}
+
 pub enum Game {
     Waiting {
         p1: Session,
         id: String,
+        settings: GameSettings,
     },
     Ready {
         p1: Option<Session>,
@@ -17,11 +22,13 @@ pub enum Game {
         p2: Option<Session>,
         p2_id: String,
         id: String,
+        settings: GameSettings,
     },
     Running {
         p1: TetrisSocket,
         p2: TetrisSocket,
         id: String,
+        settings: GameSettings,
     },
 }
 
@@ -32,6 +39,20 @@ impl Debug for Game {
             Game::Ready { id, .. } => f.debug_struct("Ready").field("id", id).finish(),
             Game::Running { id, .. } => f.debug_struct("Running").field("id", id).finish(),
         }
+    }
+}
+
+impl Serialize for Game {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match &self {
+            Game::Waiting { settings, .. }
+            | Game::Ready { settings, .. }
+            | Game::Running { settings, .. } => settings,
+        }
+        .serialize(serializer)
     }
 }
 
