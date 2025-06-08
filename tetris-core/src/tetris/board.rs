@@ -194,7 +194,7 @@ impl Board {
         false
     }
 
-    /// Move along the x-axis. Returns if movement was a success
+    /// Move along the y-axis. Returns if movement was a success
     pub fn move_down(&self, tetrimino: &mut Tetrimino) -> bool {
         tetrimino.offset_y += 1;
         if self.can_place(tetrimino) {

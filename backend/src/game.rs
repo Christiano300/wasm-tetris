@@ -5,10 +5,7 @@ use serde::Serialize;
 use std::fmt::Debug;
 
 use crate::proto::TetrisSocket;
-use tetris_core::net::Message;
-
-#[derive(Serialize, Debug, Clone, PartialEq, Eq, Default)]
-pub struct GameSettings {}
+use tetris_core::{net::Message, tetris::GameSettings};
 
 pub enum Game {
     Waiting {
@@ -47,12 +44,7 @@ impl Serialize for Game {
     where
         S: serde::Serializer,
     {
-        match &self {
-            Game::Waiting { settings, .. }
-            | Game::Ready { settings, .. }
-            | Game::Running { settings, .. } => settings,
-        }
-        .serialize(serializer)
+        self.get_settings().serialize(serializer)
     }
 }
 
@@ -77,6 +69,14 @@ impl Game {
         }
     }
 
+    pub fn get_settings(&self) -> &GameSettings {
+        match &self {
+            Game::Waiting { settings, .. }
+            | Game::Ready { settings, .. }
+            | Game::Running { settings, .. } => settings,
+        }
+    }
+
     pub async fn recv(&mut self, msg: &Bytes, player_id: &str) {
         let (_this, other) = self.get_sockets(player_id);
         let Ok(message) = serde_cbor::from_slice(msg) else {
@@ -85,14 +85,24 @@ impl Game {
         };
         match message {
             Message::LineSend(lines) => other.line_send(lines).await,
-            Message::Start => {}
+
+            // only meant for S2C
+            Message::Start { .. } => {}
+
+            // relay everything else directly
+            msg => {
+                let _ = other.send(&msg).await;
+            }
         }
     }
 
     pub async fn start(&mut self) {
-        if let Game::Running { p1, p2, .. } = self {
-            let _ = p1.send(&Message::Start).await;
-            let _ = p2.send(&Message::Start).await;
+        if let Game::Running {
+            p1, p2, settings, ..
+        } = self
+        {
+            let _ = p1.send(&Message::Start(*settings)).await;
+            let _ = p2.send(&Message::Start(*settings)).await;
         }
     }
 

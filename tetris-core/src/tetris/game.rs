@@ -1,4 +1,8 @@
-use rand::Rng;
+#[cfg(feature = "wasm-bindgen")]
+use wasm_bindgen::prelude::wasm_bindgen;
+
+use rand::prelude::{Rng, ThreadRng};
+use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, mem};
 
 use super::{Board, Direction, Mino, Tetrimino};
@@ -7,6 +11,28 @@ const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
 const LOCKDOWN_MOVES: u8 = 5;
 const LEVEL_GOAL: i8 = 5;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
+pub struct GameSettings {
+    pub jupiter: bool,
+    pub easy: bool,
+    pub nes: bool,
+    pub random: bool,
+}
+
+#[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
+impl GameSettings {
+    #[cfg_attr(feature = "wasm-bindgen", wasm_bindgen(constructor))]
+    pub fn new(jupiter: bool, easy: bool, nes: bool, random: bool) -> Self {
+        Self {
+            jupiter,
+            easy,
+            nes,
+            random,
+        }
+    }
+}
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Event {
@@ -50,14 +76,16 @@ pub struct Game {
     lockdown_moves: u8,
     lockdown_y: i8,
     level_goal: i8,
+    rand: ThreadRng,
     pub done: bool,
     pub garbage_slot: u8,
     pub garbage_acc: u8,
     pub events: Vec<Event>,
+    pub settings: GameSettings,
 }
 
 impl Game {
-    pub fn new() -> Self {
+    pub fn new(settings: GameSettings) -> Self {
         let mut new = Self {
             board: Board::default(),
             piece: Tetrimino::new(Mino::I, 0, 0),
@@ -82,10 +110,12 @@ impl Game {
             lockdown_moves: LOCKDOWN_MOVES,
             lockdown_y: 0,
             level_goal: LEVEL_GOAL,
+            rand: rand::rng(),
             done: false,
             events: vec![],
             garbage_slot: 0,
             garbage_acc: 0,
+            settings,
         };
         let mut rng = rand::rng();
         new.garbage_slot = rng.random_range(1..9);
@@ -141,7 +171,7 @@ impl Game {
                 }
             }
             Phase::Lock => {
-                if self.lockdown_timer == 0 {
+                if self.settings.nes || self.lockdown_timer == 0 {
                     self.board.drop(&mut self.piece);
                     self.board.place(&self.piece);
                     self.phase = Phase::Completion;
@@ -166,10 +196,12 @@ impl Game {
                         _ => 0,
                     };
                 self.events.push(Event::Completion(rows));
-                self.level_goal -= rows as i8;
-                if self.level_goal <= 0 {
-                    self.level += 1;
-                    self.level_goal += LEVEL_GOAL;
+                if !self.settings.easy {
+                    self.level_goal -= rows as i8;
+                    if self.level_goal <= 0 {
+                        self.level += 1;
+                        self.level_goal += LEVEL_GOAL;
+                    }
                 }
                 self.add_garbage();
                 self.phase = Phase::Generation { frames_left: 12 };
@@ -250,6 +282,12 @@ impl Game {
                 }
             }
         }
+        if self.settings.jupiter && !actions.contains(&Action::SoftDrop) {
+            if let Phase::Falling { timer } = self.phase {
+                let new = timer.saturating_sub(SOFT_FALL_MULT - 1);
+                self.phase = Phase::Falling { timer: new }
+            }
+        }
     }
 
     const fn start_fall(&mut self) {
@@ -299,14 +337,16 @@ impl Game {
     }
 
     fn next_kind(&mut self) -> Mino {
+        if self.settings.random {
+            return self.bag[self.rand.random_range(0..7)];
+        }
         if self.bag_idx < 7 {
             let next = self.bag[self.bag_idx];
             self.bag_idx += 1;
             return next;
         }
-        let mut rand = rand::rng();
         for i in 0..7 {
-            let swap = rand.random_range(i..7);
+            let swap = self.rand.random_range(i..7);
             self.bag.swap(i, swap);
         }
         self.bag_idx = 1;
@@ -355,11 +395,5 @@ impl Game {
     fn gameover(&mut self) {
         self.done = true;
         self.events.push(Event::Gameover);
-    }
-}
-
-impl Default for Game {
-    fn default() -> Self {
-        Game::new()
     }
 }

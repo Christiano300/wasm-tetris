@@ -12,7 +12,7 @@ static HB_INTERVAL: Duration = Duration::from_secs(5);
 static TIMEOUT: Duration = Duration::from_secs(15);
 
 pub async fn waiting_cancel(session: Session, state: web::Data<Games>, id: &String) {
-    let mut lock = state.0.lock().await;
+    let mut lock = state.games.lock().await;
     let mut remove = false;
     if let Some(game) = lock.get(id) {
         let game = game.lock().await;
@@ -21,6 +21,7 @@ pub async fn waiting_cancel(session: Session, state: web::Data<Games>, id: &Stri
     if remove {
         lock.remove(id);
         drop(lock);
+        state.updated().await;
     }
     let _ = session.close(None).await;
 }
@@ -75,7 +76,7 @@ pub async fn ws_waiting(
 
 async fn running_cancel(state: web::Data<Games>, game: Arc<Mutex<Game>>) {
     let mut lock = game.lock().await;
-    state.0.lock().await.remove(lock.get_id());
+    state.games.lock().await.remove(lock.get_id());
     lock.client_timeout().await;
 }
 

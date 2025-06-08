@@ -6,3 +6,7 @@ edition = "2024"
 [dependencies]
 rand = "0.9.1"
 serde.workspace = true
+wasm-bindgen = { version = "0.2.100", optional = true, default-features = false }
+
+[features]
+wasm-bindgen = ["dep:wasm-bindgen"]

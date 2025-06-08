@@ -22,7 +22,7 @@ fn permute(state: &mut [u32]) {
     state[1] = temp;
 
     for i in 0..8 {
-        copy[i] = state[i] ^ (!state[(i + 1) % 8] & state[(i + 6) % 8]) >> 3;
+        copy[i] = state[i] ^ ((!state[(i + 1) % 8] & state[(i + 6) % 8]) >> 3);
         copy[i] ^= copy[i] << 5;
     }
 

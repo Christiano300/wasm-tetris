@@ -4,13 +4,17 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^20",
+    "@types/alpinejs": "^3.13.11",
     "esbuild": "0.20.2",
-    "vite-plugin-wasm-pack": "^0.1.12",
-    "vite": "^4"
+    "vite": "^4",
+    "vite-plugin-wasm-pack": "^0.1.12"
   },
   "scripts": {
-    "dev": "vite --host --debug",
+    "dev": "vite --host",
     "build": "vite build --debug",
     "optimize": "vite optimize --debug"
+  },
+  "dependencies": {
+    "alpinejs": "^3.14.9"
   }
 }

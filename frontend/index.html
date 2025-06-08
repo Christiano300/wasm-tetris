@@ -8,11 +8,89 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
 
-  <body>
-    <main>
+  <!-- state: menu, join, create, wait, setup, play -->
+  <body
+    x-data="{state: 'menu', waitingId: null, createGame(data) {
+    const url = new URL(window.backendUrl + '/create-game');
+    url.searchParams.set('jupiter', data.jupiter);
+    url.searchParams.set('easy', data.easy);
+    url.searchParams.set('nes', data.nes);
+    url.searchParams.set('random', data.random);
+    const socket = new WebSocket(url);
+
+    socket.onmessage = (event) => {
+      const parts = event.data.split(' ');
+      console.log(parts);
+      if (parts[0] === 'lobby') {
+        this.waitingId = parts[1];
+      } else if (parts[0] === 'ready') {
+        this.state = 'play';
+        this.waitingId = null;
+        $store.client.connect(parts[1]);
+        socket.close();
+      }
+    }
+  }}"
+  >
+    <div x-cloak x-show="state == 'menu'">
+      <div class="center">
+        <button @click="state = 'create'">Create Game</button>
+        <button @click="state = 'join'">Join Game</button>
+        <button @click="state = 'setup'">Play singleplayer</button>
+      </div>
+    </div>
+    <div x-cloak x-show="state == 'join'" x-data="games">
+      <div class="center">
+        <p x-show="games.length === 0">No games right now...</p>
+        <template x-for="game in games" :key="game.id">
+          <div class="game">
+            <h2 x-text="game.id"></h2>
+            <button
+              @click="$store.client.joinAndConnect(game.id); state = 'play'"
+            >
+              Join
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+    <div
+      x-cloak class="form"
+      x-show="state == 'create' || state == 'setup'"
+      x-data="{jupiter: false, easy: false, nes: false, random: false}"
+    >
+        <label>
+          <input type="checkbox" x-model="jupiter" />
+          Jupiter: Your are always holding down
+        </label>
+        <label>
+          <input type="checkbox" x-model="easy" />
+          Easy: No levelup for you
+        </label>
+        <label>
+          <input type="checkbox" x-model="nes" />
+          NES: The pieces are sticky
+        </label>
+        <label>
+          <input type="checkbox" x-model="random" />
+          Random: No Bag system, pieces are completely random
+        </label>
+      <button x-show="state == 'create'" @click="createGame($data); state = 'wait'">
+        Create Game
+      </button>
+      <button
+        x-show="state == 'setup'"
+        @click="$store.client.runSinglePlayer($data); state = 'play'"
+      >
+        Create Game
+      </button>
+    </div>
+    <div x-cloak x-show="state =='wait'">
+      <p>Waiting for players to join...</p>
+      <p x-text="'Your id: ' + (waitingId ?? 'Loading...')"></p>
+    </div>
+    <div x-cloak x-show="state == 'play'" class="tetris">
       <canvas width="1000" height="700"></canvas>
-    </main>
-    <input placeholder="Game id" id="gameId">
-    <button>Connect</button>
+    </div>
   </body>
 </html>

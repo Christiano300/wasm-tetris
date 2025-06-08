@@ -18,15 +18,11 @@ use crate::{
 use js_sys::Function;
 use tetris_core::{
     net::Message,
-    tetris::{Event, Game, Phase},
+    tetris::{Event, Game, GameSettings, Phase},
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
 use ws_stream_wasm::{WsMeta, WsStreamIo};
-
-// const BACKEND_URL: &str = "https://tetris.patzl.dev";
-const BACKEND_URL: &str = "http://172.21.49.178:4444";
-// const BACKEND_URL: &str = "http://localhost:4444";
 
 type MessageCodec = CborCodec<Message, Message>;
 type TetrisFrames = Framed<IoStream<WsStreamIo, Vec<u8>>, MessageCodec>;
@@ -37,6 +33,7 @@ type TetrisStream = SplitStream<TetrisFrames>;
 #[wasm_bindgen]
 pub struct Instance {
     auth_func: Function,
+    backend_url: String,
     context: Rc<CanvasRenderingContext2d>,
     drawing_context: DrawingContext,
     input_manager: InputManager,
@@ -47,7 +44,11 @@ pub struct Instance {
 #[wasm_bindgen]
 impl Instance {
     #[wasm_bindgen(constructor)]
-    pub fn new(context: CanvasRenderingContext2d, auth_func: Function) -> Self {
+    pub fn new(
+        context: CanvasRenderingContext2d,
+        auth_func: Function,
+        backend_url: String,
+    ) -> Self {
         Self {
             auth_func,
             context: Rc::new(context),
@@ -55,6 +56,7 @@ impl Instance {
             input_manager: InputManager::new(),
             game: Rc::new(RefCell::new(None)),
             session: Rc::new(RefCell::new(None)),
+            backend_url,
         }
     }
 
@@ -125,11 +127,12 @@ impl Instance {
                 Event::Gameover => {
                     let mut game = self.game.borrow_mut();
                     if let Some(ref mut game) = *game {
-                        gameover(&self.auth_func, game.score);
+                        gameover(&self.backend_url, &self.auth_func, game.score);
                     }
                     *game = None;
                     if let Some(mut session) = self.session.borrow_mut().take() {
                         spawn_local(async move {
+                            let _ = session.send(Message::Gameover).await;
                             let _ = session.close().await;
                         });
                     }
@@ -154,7 +157,7 @@ impl Instance {
 
     #[wasm_bindgen]
     pub async fn connect(&mut self, name: &str) {
-        let url = format!("{BACKEND_URL}/connect/{name}");
+        let url = format!("{}/connect/{name}", self.backend_url);
         let ws = WsMeta::connect(&url, None).await;
 
         let Ok((meta, stream)) = ws else {
@@ -169,6 +172,17 @@ impl Instance {
         spawn_local(conn_loop_static(meta, stream, self.game.clone()));
 
         self.session = session;
+    }
+
+    #[wasm_bindgen]
+    pub fn start_singleplayer(&self, settings: GameSettings) {
+        let Ok(mut game) = self.game.try_borrow_mut() else {
+            return;
+        };
+        if game.is_some() {
+            return;
+        }
+        game.get_or_insert(Game::new(settings));
     }
 }
 
@@ -187,19 +201,21 @@ async fn conn_loop_static(
                     game.accumulate_garbage(lines);
                 }
             }
-            Message::Start => {
+            Message::Start(settings) => {
                 let try_borrow_mut = game.try_borrow_mut();
                 if let Ok(mut game) = try_borrow_mut {
-                    *game = Some(Game::new());
+                    *game = Some(Game::new(settings));
                 } else {
                     console_log!("Cannot set game");
                 }
             }
+            Message::Gameover => todo!(),
+            Message::Disconnect => todo!(),
         }
     }
 }
 
-fn gameover(auth_func: &Function, score: u32) {
+fn gameover(backend_url: &str, auth_func: &Function, score: u32) {
     let window = window().unwrap();
     if !tetris_confirm("You lost!, do you want to share your score?") {
         return;
@@ -225,5 +241,5 @@ fn gameover(auth_func: &Function, score: u32) {
     options.set_body(&JsValue::from_str(&format!(
         "{{\"score\": {score}, \"auth\": \"{token}\", \"name\": \"{name}\"}}",
     )));
-    let _ = window.fetch_with_str_and_init(&format!("{BACKEND_URL}/highscore"), &options);
+    let _ = window.fetch_with_str_and_init(&format!("{backend_url}/highscore"), &options);
 }

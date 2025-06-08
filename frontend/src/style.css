@@ -1,3 +1,7 @@
+* {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 html,
 body {
   margin: 0;
@@ -6,8 +10,49 @@ body {
   background-color: #c7e;
 }
 
-main {
+.tetris {
   display: flex;
   justify-content: center;
   align-items: center;
 }
+
+.center {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 60em;
+  column-gap: 5em;
+  margin: 5em auto;
+
+  & button {
+    font-size: 1.5em;
+    cursor: pointer;
+  }
+}
+
+.game {
+  background: white;
+  border-radius: 1.5em;
+  padding: 1em;
+  display: inline-block;
+
+  & h2 {
+    margin: 0;
+  }
+
+  & button {
+    float: inline-end;
+    border-radius: 0.5em;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+  margin: 5em auto;
+  width: fit-content;
+}
+
+[x-cloak] { display: none !important; }

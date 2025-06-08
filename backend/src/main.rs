@@ -1,9 +1,10 @@
 use actix_cors::Cors;
 use actix_web::{
-    get, http::header::ContentType, middleware::Compress, post, rt, web, App, Error, HttpRequest,
-    HttpResponse, HttpServer, Responder,
+    get, middleware::Compress, post, rt, web, App, Error, HttpRequest, HttpResponse, HttpServer,
+    Responder,
 };
-use game::{Game, GameSettings};
+use broadcast::Broadcaster;
+use game::Game;
 use log::info;
 use proto::TetrisSocket;
 use rand::{distr::Alphanumeric, Rng};
@@ -16,10 +17,12 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
+use tetris_core::tetris::GameSettings;
 use tokio::sync::Mutex;
 use ws::{ws_running, ws_waiting};
 
 mod auth;
+mod broadcast;
 mod game;
 mod proto;
 mod ws;
@@ -57,11 +60,14 @@ impl<'de> Deserialize<'de> for Leaderboard {
     }
 }
 
-struct Games(Mutex<HashMap<String, Arc<Mutex<Game>>>>);
+struct Games {
+    games: Mutex<HashMap<String, Arc<Mutex<Game>>>>,
+    broadcaster: Arc<Broadcaster>,
+}
 
 impl Games {
     pub async fn serialize(&self) -> String {
-        let map_guard = self.0.lock().await;
+        let map_guard = self.games.lock().await;
 
         // Clone Arc pointers so we can release map lock early
         let entries: Vec<_> = map_guard
@@ -74,10 +80,20 @@ impl Games {
         let mut result = HashMap::new();
         for (key, inner_mutex) in entries {
             let obj_guard = inner_mutex.lock().await;
-            result.insert(key, serde_json::to_value(&*obj_guard).unwrap()); // assuming Object: Clone + Serialize
+            if matches!(*obj_guard, Game::Waiting { .. }) {
+                result.insert(key, serde_json::to_value(&*obj_guard).unwrap()); // assuming Object: Clone + Serialize
+            }
         }
 
         serde_json::to_string(&result).unwrap()
+    }
+
+    pub async fn updated(&self) {
+        self.broadcaster.broadcast(&self.serialize().await).await;
+    }
+
+    pub async fn new_listener(&self) -> impl Responder {
+        self.broadcaster.new_client(&self.serialize().await).await
     }
 }
 
@@ -117,6 +133,7 @@ async fn ws_index(
     req: HttpRequest,
     stream: web::Payload,
     state: web::Data<Games>,
+    settings: web::Query<GameSettings>,
 ) -> Result<impl Responder, Error> {
     info!("WS Request");
     let (response, session, stream) = actix_ws::handle(&req, stream)?;
@@ -125,11 +142,12 @@ async fn ws_index(
     let game = Arc::new(Mutex::new(Game::Waiting {
         p1: session.clone(),
         id: id.clone(),
-        settings: GameSettings::default(),
+        settings: *settings,
     }));
-    let mut lock = state.0.lock().await;
+    let mut lock = state.games.lock().await;
     lock.insert(id.clone(), game.clone());
     drop(lock);
+    state.updated().await;
 
     let stream = stream.aggregate_continuations();
     rt::spawn(ws_waiting(state.clone(), id, session, stream));
@@ -141,11 +159,13 @@ async fn ws_index(
 async fn join(state: web::Data<Games>, path: web::Path<String>) -> impl Responder {
     let game_id = path.into_inner();
 
-    let mut lock = state.0.lock().await;
-    let Some(game) = lock.get_mut(&game_id) else {
+    let mut lock = state.games.lock().await;
+    let Some(game_arc) = lock.get_mut(&game_id) else {
         return HttpResponse::NotFound().finish();
     };
-    let mut game = game.lock().await;
+    let game_arc = Arc::clone(game_arc);
+    drop(lock);
+    let mut game = game_arc.lock().await;
     let p1 = get_id();
     let p2 = get_id();
     let settings;
@@ -166,8 +186,10 @@ async fn join(state: web::Data<Games>, path: web::Path<String>) -> impl Responde
         p2: None,
         p2_id: p2.clone(),
         id: game_id.clone(),
-        settings: settings.clone(),
+        settings: *settings,
     };
+    drop(game);
+    state.updated().await;
 
     HttpResponse::Ok().json(format!("{game_id}/{p2}"))
 }
@@ -181,11 +203,13 @@ async fn connect(
 ) -> Result<impl Responder, Error> {
     info!("Connect attempt");
     let (game_id, player_id) = path.into_inner();
-    let mut lock = state.0.lock().await;
+    let mut lock = state.games.lock().await;
     let Some(game_arc) = lock.get_mut(&game_id) else {
         info!("Nonexistent game: {game_id}");
         return Ok(HttpResponse::NotFound().finish());
     };
+    let game_arc = Arc::clone(game_arc);
+    drop(lock);
 
     let mut game = game_arc.lock().await;
     let is_p1;
@@ -263,6 +287,7 @@ async fn connect(
 
     if matches!(*game, Game::Running { .. }) {
         game.start().await;
+        info!("Starting game {}", game.get_id());
     }
 
     let stream = stream.aggregate_continuations();
@@ -279,13 +304,12 @@ async fn connect(
 
 #[get("/games")]
 async fn all_games(state: web::Data<Games>) -> impl Responder {
-    HttpResponse::Ok()
-        .content_type(ContentType::json())
-        .body(state.serialize().await)
+    state.new_listener().await
 }
 
 #[get("/leaderboard")]
 async fn board_index(state: web::Data<Leaderboard>) -> Result<impl Responder, Error> {
+    info!("Highscore request");
     let board = state.board.lock().await;
     let map = board
         .iter()
@@ -317,7 +341,10 @@ async fn main() -> std::io::Result<()> {
             board: Mutex::new(BTreeSet::new()),
         },
     });
-    let games: web::Data<Games> = web::Data::new(Games(Mutex::new(HashMap::new())));
+    let games: web::Data<Games> = web::Data::new(Games {
+        games: Mutex::new(HashMap::new()),
+        broadcaster: Broadcaster::create(),
+    });
     info!("Server starting");
     HttpServer::new(move || {
         App::new()
@@ -337,8 +364,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(state.clone())
             .app_data(games.clone())
     })
-    .bind(("localhost", 4444))?
+    // .bind(("localhost", 4444))?
     // .bind(("172.21.49.178", 4444))?
+    .bind(("0.0.0.0", 4444))?
     .run()
     .await
 }
