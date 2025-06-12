@@ -14,6 +14,36 @@ declare global {
 
 window.backendUrl = "https://tetris.patzl.dev";
 
+const joinGame = async (gameId: string) => {
+  if (running) {
+    return;
+  }
+  pressedKeys.clear();
+  try {
+    game
+      .connect(gameId)
+      .then(startGame);
+  } catch (e) {
+    console.error("Error connecting to game?: ", e);
+  }
+};
+
+const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
+  if (running) {
+    return;
+  }
+
+  pressedKeys.clear();
+  game.start_singleplayer(new GameSettings(settings.jupiter, settings.easy, settings.nes, settings.random));
+  startGame();
+};
+
+document.addEventListener("alpine:init", () => {
+  initAlpine(joinGame, runSinglePlayer);
+});
+
+window.Alpine = Alpine;
+Alpine.start();
 
 // clear pressed keys before alerts since keyup events won't fire
 globalThis.tetris_confirm = (text: string) => {
@@ -113,35 +143,3 @@ window.addEventListener("keyup", (e) => {
     pressedKeys.delete(action);
   }
 });
-
-const joinGame = async (gameId: string) => {
-  if (running) {
-    return;
-  }
-  pressedKeys.clear();
-  try {
-    game
-      .connect(gameId)
-      .then(startGame);
-  } catch (e) {
-    console.error("Error connecting to game?: ", e);
-  }
-};
-
-const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
-  if (running) {
-    return;
-  }
-
-  pressedKeys.clear();
-  game.start_singleplayer(new GameSettings(settings.jupiter, settings.easy, settings.nes, settings.random));
-  startGame();
-};
-
-
-document.addEventListener("alpine:init", () => {
-  initAlpine(joinGame, runSinglePlayer);
-});
-
-window.Alpine = Alpine;
-Alpine.start();

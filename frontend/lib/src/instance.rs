@@ -8,7 +8,6 @@ use futures_util::{
 };
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
-use wasm_bindgen_test::console_log;
 
 use crate::{
     draw::DrawingContext,
@@ -18,7 +17,7 @@ use crate::{
 use js_sys::Function;
 use tetris_core::{
     net::Message,
-    tetris::{Event, Game, GameSettings, Phase},
+    tetris::{Board, Event, Game, GameSettings, Phase},
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
@@ -30,6 +29,8 @@ type TetrisFrames = Framed<IoStream<WsStreamIo, Vec<u8>>, MessageCodec>;
 type TetrisSession = SplitSink<TetrisFrames, Message>;
 type TetrisStream = SplitStream<TetrisFrames>;
 
+const SHARE_COOLDOWN: u8 = 15;
+const EMPTY_BOARD: Board = Board::new();
 #[wasm_bindgen]
 pub struct Instance {
     auth_func: Function,
@@ -39,6 +40,8 @@ pub struct Instance {
     input_manager: InputManager,
     game: Rc<RefCell<Option<Game>>>,
     session: Rc<RefCell<Option<TetrisSession>>>,
+    opponent_board: Rc<RefCell<Option<Board>>>,
+    share_cooldown: u8,
 }
 
 #[wasm_bindgen]
@@ -57,6 +60,8 @@ impl Instance {
             game: Rc::new(RefCell::new(None)),
             session: Rc::new(RefCell::new(None)),
             backend_url,
+            opponent_board: Rc::new(RefCell::new(None)),
+            share_cooldown: SHARE_COOLDOWN,
         }
     }
 
@@ -104,6 +109,21 @@ impl Instance {
             BOARD_X + 350.,
             BOARD_Y,
         );
+        if let Some(ref board) = *self.opponent_board.borrow() {
+            DrawingContext::draw_opponent_board(
+                &self.context,
+                board,
+                BOARD_X + 350.,
+                BOARD_Y + 430.,
+            );
+        } else {
+            DrawingContext::draw_opponent_board(
+                &self.context,
+                &EMPTY_BOARD,
+                BOARD_X + 350.,
+                BOARD_Y + 430.,
+            );
+        }
         DrawingContext::draw_level(&self.context, game.level, BOARD_X + 320., 20.);
     }
 
@@ -122,6 +142,17 @@ impl Instance {
         let events = game.events.clone();
         drop(borrow);
 
+        self.share_cooldown -= 1;
+        if self.share_cooldown == 0 {
+            self.share_cooldown = SHARE_COOLDOWN;
+            if let Some(ref mut session) = *self.session.borrow_mut() {
+                if let Some(ref game) = *self.game.borrow() {
+                    let mut board = game.board.clone();
+                    board.place(&game.piece);
+                    let _ = session.send(Message::GameState(board.into())).await;
+                }
+            }
+        }
         for event in &events {
             match event {
                 Event::Gameover => {
@@ -169,7 +200,12 @@ impl Instance {
 
         let session = Rc::new(RefCell::new(Some(session)));
 
-        spawn_local(conn_loop_static(meta, stream, self.game.clone()));
+        spawn_local(conn_loop_static(
+            meta,
+            stream,
+            self.game.clone(),
+            Rc::clone(&self.opponent_board),
+        ));
 
         self.session = session;
     }
@@ -190,6 +226,7 @@ async fn conn_loop_static(
     _meta: WsMeta,
     mut stream: TetrisStream,
     game: Rc<RefCell<Option<Game>>>,
+    opponent_board: Rc<RefCell<Option<Board>>>,
 ) {
     while let Some(msg) = stream.next().await {
         let Ok(msg) = msg else {
@@ -205,12 +242,14 @@ async fn conn_loop_static(
                 let try_borrow_mut = game.try_borrow_mut();
                 if let Ok(mut game) = try_borrow_mut {
                     *game = Some(Game::new(settings));
-                } else {
-                    console_log!("Cannot set game");
                 }
             }
-            Message::Gameover => todo!(),
-            Message::Disconnect => todo!(),
+            Message::Gameover | Message::Disconnect => {
+                *opponent_board.borrow_mut() = Some(EMPTY_BOARD);
+            }
+            Message::GameState(board) => {
+                *opponent_board.borrow_mut() = Some(*board);
+            }
         }
     }
 }

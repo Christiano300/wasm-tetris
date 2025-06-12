@@ -16,7 +16,7 @@ export function initAlpine(connect: (game: string) => void, runSinglePlayer: (se
     games: [],
 
     init() {
-      const eventSource = new EventSource("http://localhost:4444/games");
+      const eventSource = new EventSource(window.backendUrl + "/games");
       eventSource.onmessage = (event) => {
         this.message(JSON.parse(event.data));
       }

@@ -1,5 +1,14 @@
+use serde::{
+    Deserialize, Serialize,
+    de::{self, Expected, Visitor},
+    ser::SerializeTuple,
+};
+
+pub const BOARD_WIDTH: usize = 10;
+pub const BOARD_HEIGHT: usize = 40;
+
 #[repr(u8)]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Mino {
     #[default]
     Empty,
@@ -58,20 +67,89 @@ pub enum Direction {
     Ccw,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
-    pub buffer: [[Mino; 10]; 40],
+    pub buffer: [[Mino; BOARD_WIDTH]; BOARD_HEIGHT],
+}
+
+impl Serialize for Board {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut board = serializer.serialize_tuple(BOARD_WIDTH * BOARD_HEIGHT)?;
+        for row in self.buffer {
+            for cell in row {
+                board.serialize_element(&cell)?;
+            }
+        }
+        board.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Board {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct BoardVisitor;
+
+        impl<'de> Visitor<'de> for BoardVisitor {
+            type Value = Board;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a tetris board")
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                struct WrongTupleLen;
+
+                impl Expected for WrongTupleLen {
+                    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        write!(
+                            formatter,
+                            "expected board with len {}",
+                            BOARD_WIDTH * BOARD_HEIGHT
+                        )
+                    }
+                }
+
+                let mut board = [[Mino::Empty; BOARD_WIDTH]; BOARD_HEIGHT];
+                let mut len = 0;
+
+                for i in 0..BOARD_HEIGHT {
+                    for j in 0..BOARD_WIDTH {
+                        let Some(cell) = seq.next_element()? else {
+                            return Err(de::Error::invalid_length(len, &WrongTupleLen));
+                        };
+                        board[i][j] = cell;
+                        len += 1;
+                    }
+                }
+
+                Ok(Board { buffer: board })
+            }
+        }
+        deserializer.deserialize_tuple(BOARD_WIDTH * BOARD_HEIGHT, BoardVisitor)
+    }
 }
 
 impl Default for Board {
     fn default() -> Self {
-        Self {
-            buffer: [[Mino::Empty; 10]; 40],
-        }
+        Self::new()
     }
 }
 
 impl Board {
+    pub const fn new() -> Self {
+        Self {
+            buffer: [[Mino::Empty; BOARD_WIDTH]; BOARD_HEIGHT],
+        }
+    }
+
     pub fn place(&mut self, tetrimino: &Tetrimino) {
         if tetrimino.offset_y < 0 {
             return;

@@ -5,16 +5,11 @@ use web_sys::{
     CanvasRenderingContext2d, OffscreenCanvas, OffscreenCanvasRenderingContext2d as CanvasContext,
 };
 
-use tetris_core::tetris::{Mino, Tetrimino};
+use tetris_core::tetris::{Board, Mino, Tetrimino};
 
 const fn get_base_color(kind: Mino) -> Color {
     match kind {
-        Mino::Empty => Color {
-            r: 0,
-            g: 0,
-            b: 0,
-            alpha: None,
-        },
+        Mino::Empty => Color::no_alpha(0, 0, 0),
         Mino::Garbage => Color::no_alpha(100, 100, 100),
         Mino::I => Color::no_alpha(0, 200, 255),
         Mino::O => Color::no_alpha(255, 255, 0),
@@ -45,34 +40,35 @@ impl DrawingContext {
 
     pub fn new() -> Self {
         Self {
-            i: Self::make_mino(get_base_color(Mino::I)),
-            o: Self::make_mino(get_base_color(Mino::O)),
-            t: Self::make_mino(get_base_color(Mino::T)),
-            s: Self::make_mino(get_base_color(Mino::S)),
-            z: Self::make_mino(get_base_color(Mino::Z)),
-            j: Self::make_mino(get_base_color(Mino::J)),
-            l: Self::make_mino(get_base_color(Mino::L)),
-            garbage: Self::make_mino(get_base_color(Mino::Garbage)),
+            i: Self::make_mino(Mino::I),
+            o: Self::make_mino(Mino::O),
+            t: Self::make_mino(Mino::T),
+            s: Self::make_mino(Mino::S),
+            z: Self::make_mino(Mino::Z),
+            j: Self::make_mino(Mino::J),
+            l: Self::make_mino(Mino::L),
+            garbage: Self::make_mino(Mino::Garbage),
             board: Self::make_board(),
         }
     }
 
-    fn make_mino(base_color: Color) -> SubImage {
+    fn make_mino(mino: Mino) -> SubImage {
+        let base_color = get_base_color(mino);
         SubImage::new(30, 30, |ctx| {
             let gradient = ctx.create_linear_gradient(0., 0., 0., 30.);
-            let _ = gradient.add_color_stop(1., &base_color.lighten(0.3).to_css_color());
-            let _ = gradient.add_color_stop(0., &base_color.lighten(0.7).to_css_color());
+            let _ = gradient.add_color_stop(1., &base_color.lighten(0.3).to_css());
+            let _ = gradient.add_color_stop(0., &base_color.lighten(0.7).to_css());
 
             ctx.set_fill_style_canvas_gradient(&gradient);
             ctx.fill_rect(2., 2., 28., 28.);
 
-            ctx.set_stroke_style_str(&base_color.lighten(0.2).darken(0.15).to_css_color());
+            ctx.set_stroke_style_str(&base_color.lighten(0.2).darken(0.15).to_css());
             ctx.set_line_width(2.);
             ctx.begin_path();
             let _ = ctx.round_rect_with_f64(2., 2., 27., 27., 2.);
             ctx.stroke();
 
-            ctx.set_stroke_style_str(&base_color.lighten(0.3).darken(0.4).to_css_color());
+            ctx.set_stroke_style_str(&base_color.lighten(0.3).darken(0.4).to_css());
             ctx.set_line_width(1.);
             ctx.begin_path();
             let _ = ctx.round_rect_with_f64(1., 1., 29., 29., 2.);
@@ -81,7 +77,7 @@ impl DrawingContext {
     }
 
     fn draw_ghost_mino(ctx: &CanvasContext, base_color: Color) {
-        ctx.set_stroke_style_str(&base_color.lighten(0.7).alpha(50).to_css_color());
+        ctx.set_stroke_style_str(&base_color.lighten(0.7).alpha(50).to_css());
         ctx.set_line_width(1.);
         let _ = ctx.round_rect_with_f64(1., 1., 29., 29., 2.);
         ctx.stroke();
@@ -93,14 +89,14 @@ impl DrawingContext {
         SubImage::new(width, height, |ctx| {
             let width = f64::from(width);
             let height = f64::from(height);
-            ctx.set_fill_style_str(&Color::no_alpha(40, 40, 40).to_css_color());
+            ctx.set_fill_style_str(&Color::no_alpha(40, 40, 40).to_css());
             ctx.fill_rect(0., 0., width, height);
 
-            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css_color());
+            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css());
             ctx.set_line_width(5.);
             ctx.stroke_rect(2., 2., width - 4., height - 4.);
 
-            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css_color());
+            ctx.set_stroke_style_str(&Color::no_alpha(70, 70, 70).to_css());
             ctx.set_line_width(0.5);
             ctx.begin_path();
             for i in 0..=10 {
@@ -231,9 +227,26 @@ impl DrawingContext {
         x: f64,
         y: f64,
     ) {
-        ctx.clear_rect(x, y, 31. * 4., 500. + 2. * 31.);
+        ctx.clear_rect(x, y, 31. * 4., 450. + 2. * 31.);
         for (i, tetrimino) in next_queue.enumerate() {
-            self.draw_tetrimino(ctx, tetrimino, x, y + 100. * i as f64, false, true);
+            self.draw_tetrimino(ctx, tetrimino, x, y + 85. * i as f64, false, true);
+        }
+    }
+
+    pub fn draw_opponent_board(ctx: &CanvasRenderingContext2d, board: &Board, x: f64, y: f64) {
+        ctx.set_fill_style_str("#333");
+        ctx.fill_rect(x, y, 11. * 10., 21. * 10.);
+        for row in 0..20 {
+            for col in 0..10 {
+                let mino = board.buffer[row + 20][col];
+                ctx.set_fill_style_str(&get_base_color(mino).to_css());
+                ctx.fill_rect(
+                    (col as f64) * 10. + x + 5.,
+                    (row as f64) * 10. + y + 5.,
+                    10.,
+                    10.,
+                );
+            }
         }
     }
 }
@@ -282,9 +295,9 @@ impl Color {
         }
     }
 
-    fn to_css_color(self) -> String {
+    fn to_css(self) -> String {
         self.alpha.map_or_else(
-            || format!("#{:x}{:x}{:x}", self.r, self.g, self.b),
+            || format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b),
             |alpha| format!("rgb({} {} {} / {alpha}%)", self.r, self.g, self.b),
         )
     }

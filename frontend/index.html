@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script defer type="module" src="/src/index.ts"></script>
     <link rel="stylesheet" href="/src/style.css" />
+    <title>Tetris</title>
+    <meta name="description" content="Tetris game with multiplayer support using WebSockets.">
   </head>
 
   <!-- state: menu, join, create, wait, setup, play -->
@@ -32,7 +34,7 @@
     }
   }}"
   >
-    <div x-cloak x-show="state == 'menu'">
+    <div x-show="state == 'menu'">
       <div class="center">
         <button @click="state = 'create'">Create Game</button>
         <button @click="state = 'join'">Join Game</button>

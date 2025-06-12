@@ -13,17 +13,15 @@ wasm-bindgen = "0.2.95"
 js-sys = "0.3.72"
 wasm-bindgen-test = "0.3.45"
 
-rand = { version = "0.9.1", features = ["os_rng"] }
-getrandom = { version = "0.3.3", features = ["wasm_js"] }
-
 console_error_panic_hook = { version = "0.1.6", optional = true }
 ws_stream_wasm = "0.7.4"
 wasm-bindgen-futures = "0.4.50"
 futures_codec = { version = "0.4.1", features = ["cbor"] }
 serde.workspace = true
 bytes = "0.5.4"
-futures-util = "0.3.31"
+futures-util.workspace = true
 async_io_stream = "0.3.3"
+getrandom = { version = "0.3", features = ["wasm_js"] }
 
 [dependencies.web-sys]
 version = "0.3.72"

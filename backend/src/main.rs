@@ -135,8 +135,11 @@ async fn ws_index(
     state: web::Data<Games>,
     settings: web::Query<GameSettings>,
 ) -> Result<impl Responder, Error> {
-    info!("WS Request");
+    info!("WS Request {req:?}");
+    info!("Got here 0");
     let (response, session, stream) = actix_ws::handle(&req, stream)?;
+
+    info!("Got here 1");
 
     let id = get_id();
     let game = Arc::new(Mutex::new(Game::Waiting {
@@ -145,11 +148,15 @@ async fn ws_index(
         settings: *settings,
     }));
     let mut lock = state.games.lock().await;
+    info!("Got here 3");
     lock.insert(id.clone(), game.clone());
     drop(lock);
+    info!("Got here 4");
     state.updated().await;
+    info!("Got here 5");
 
     let stream = stream.aggregate_continuations();
+    info!("Got here 6");
     rt::spawn(ws_waiting(state.clone(), id, session, stream));
 
     Ok(response)

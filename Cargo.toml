@@ -4,6 +4,7 @@ members = ["backend", "tetris-core", "frontend/lib"]
 
 [workspace.dependencies]
 serde = { version = "1.0.217", features = ["derive"] }
+futures-util = { version = "0.3.31", default-features = false }
 
 [profile.release.package.wasm-lib]
 opt-level = "s"

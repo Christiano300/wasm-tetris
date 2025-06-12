@@ -5,6 +5,9 @@
 - [x] Random Mode (no Bag)
 - [ ] Leaderboard
 - [ ] Styling
+- [ ] Keymap
 - [x] Multiplayer 
 - [ ] Pause
 - [ ] Random Seed
+- [ ] Visible Game settings
+- [ ] Username
