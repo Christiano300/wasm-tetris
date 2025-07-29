@@ -1,5 +1,5 @@
 * {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 html,
@@ -8,6 +8,11 @@ body {
   height: 100%;
   overflow: hidden;
   background-color: #c7e;
+}
+
+body > * {
+  z-index: 2;
+  position: relative;
 }
 
 .tetris {
@@ -28,6 +33,70 @@ body {
   & button {
     font-size: 1.5em;
     cursor: pointer;
+  }
+}
+
+.cookie-message {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+
+  animation: spin 20s ease infinite alternate;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2vw;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.15);
+  z-index: 1;
+}
+
+.cookie-message::before {
+  content: "YOUR SETTINGS WILL NOT BE SAVED BECAUSE YOU HAVE NOT ACCEPTED COOKIES";
+  width: 30em;
+  text-align: center;
+  animation: moveText 3s ease-in-out infinite alternate;
+  color: rgb(226, 17, 121);
+  z-index: -1;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  40% {
+    transform: rotateY(0deg) rotateX(300deg);
+  }
+  50% {
+    transform: rotateX(360deg);
+  }
+  100% {
+    transform: rotateX(0deg) rotateZ(720deg) rotateY(360deg);
+  }
+}
+
+@keyframes moveText  {
+  0% {
+    transform: rotate(120deg) translateX(30vw) translateY(20vh);
+  }
+  30% {
+    transform: translateX(-25vw) translateY(-12vh);
+  }
+  50% {
+    transform: rotate(210deg)
+  }
+  70% {
+    transform: translateX(10vw) translateY(6vh);
+  }
+  90% {
+    transform: rotate(-90deg)
+  }
+  100% {
+    transform: translateX(30vw) translateY(-10vw) rotate(0deg);
   }
 }
 
@@ -55,4 +124,6 @@ body {
   width: fit-content;
 }
 
-[x-cloak] { display: none !important; }
+[x-cloak] {
+  display: none !important;
+}

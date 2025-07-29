@@ -1,4 +1,5 @@
 import Alpine from "alpinejs";
+import "./index";
 
 export function initAlpine(connect: (game: string) => void, runSinglePlayer: (settings: any) => void) {
   Alpine.store("client", {

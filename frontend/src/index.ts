@@ -101,7 +101,7 @@ async function update(newtime: number) {
   let elapsed = newtime - then;
   then = newtime;
   if (elapsed > 500) {
-    return;
+    elapsed = 500;
   }
   
   const keys = controls.map((key) => pressedKeys.has(key)) as [

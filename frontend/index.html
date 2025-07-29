@@ -10,9 +10,9 @@
     <meta name="description" content="Tetris game with multiplayer support using WebSockets.">
   </head>
 
-  <!-- state: menu, join, create, wait, setup, play -->
+  <!-- screen: menu, join, create, wait, setup, play, settings -->
   <body
-    x-data="{state: 'menu', waitingId: null, createGame(data) {
+    x-data="{screen: 'menu', waitingId: null, cookieConsent: 'necessary', disableMessage: false, createGame(data) {
     const url = new URL(window.backendUrl + '/create-game');
     url.searchParams.set('jupiter', data.jupiter);
     url.searchParams.set('easy', data.easy);
@@ -26,29 +26,53 @@
       if (parts[0] === 'lobby') {
         this.waitingId = parts[1];
       } else if (parts[0] === 'ready') {
-        this.state = 'play';
+        this.screen = 'play';
         this.waitingId = null;
         $store.client.connect(parts[1]);
         socket.close();
       }
     }
+  },
+  init() {
+    if (localStorage.getItem('wt_cookie-consent') === null) {
+      this.screen = 'settings';
+    }
+    this.cookieConsent = localStorage.getItem('wt_cookie-consent') ?? 'necessary';
+  },
+  removeAllCookies() {
+    localStorage.removeItem('wt_cookie-consent');
+    this.removeExtraCookies();
+  },
+  removeExtraCookies() {
+  },
+  updateCookiePreference() {
+    localStorage.setItem('wt_cookie-consent', this.cookieConsent);
+    if (this.cookieConsent === 'none') {
+      this.removeAllCookies();
+    } else if (this.cookieConsent === 'necessary') {
+      this.removeExtraCookies();
+    }
   }}"
   >
-    <div x-show="state == 'menu'">
+    <header>
+      <button @click="screen = 'menu'" x-show="screen !== 'menu'">Back to Menu</button>
+      <button @click="screen = 'settings'" x-show="screen === 'menu'">Settings</button>
+    </header>
+    <div x-cloak x-show="screen == 'menu'">
       <div class="center">
-        <button @click="state = 'create'">Create Game</button>
-        <button @click="state = 'join'">Join Game</button>
-        <button @click="state = 'setup'">Play singleplayer</button>
+        <button @click="screen = 'create'">Create Game</button>
+        <button @click="screen = 'join'">Join Game</button>
+        <button @click="screen = 'setup'">Play singleplayer</button>
       </div>
     </div>
-    <div x-cloak x-show="state == 'join'" x-data="games">
+    <div x-cloak x-show="screen == 'join'" x-data="games">
       <div class="center">
         <p x-show="games.length === 0">No games right now...</p>
         <template x-for="game in games" :key="game.id">
           <div class="game">
             <h2 x-text="game.id"></h2>
             <button
-              @click="$store.client.joinAndConnect(game.id); state = 'play'"
+              @click="$store.client.joinAndConnect(game.id); screen = 'play'"
             >
               Join
             </button>
@@ -58,7 +82,7 @@
     </div>
     <div
       x-cloak class="form"
-      x-show="state == 'create' || state == 'setup'"
+      x-show="screen == 'create' || screen == 'setup'"
       x-data="{jupiter: false, easy: false, nes: false, random: false}"
     >
         <label>
@@ -77,22 +101,45 @@
           <input type="checkbox" x-model="random" />
           Random: No Bag system, pieces are completely random
         </label>
-      <button x-show="state == 'create'" @click="createGame($data); state = 'wait'">
+      <button x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
         Create Game
       </button>
       <button
-        x-show="state == 'setup'"
-        @click="$store.client.runSinglePlayer($data); state = 'play'"
+        x-show="screen == 'setup'"
+        @click="$store.client.runSinglePlayer($data); screen = 'play'"
       >
         Create Game
       </button>
     </div>
-    <div x-cloak x-show="state =='wait'">
+    <div x-cloak x-show="screen =='wait'">
       <p>Waiting for players to join...</p>
       <p x-text="'Your id: ' + (waitingId ?? 'Loading...')"></p>
     </div>
-    <div x-cloak x-show="state == 'play'" class="tetris">
+    <div x-cloak x-show="screen == 'play'" class="tetris">
       <canvas width="1000" height="700"></canvas>
     </div>
+    <div x-cloak x-show="screen == 'settings'" class="form">
+      <h1>Settings</h1>
+      <h3>Cookie preferences</h3>
+      <p>Which cookies do you want to enable?</p>
+      <label>
+        <input type="radio" value="none" x-model="cookieConsent">
+        Absolutely no cookies
+      </label>
+      <label x-show="cookieConsent === 'none'">
+        <input type="checkbox" x-model="disableMessage">
+        Disable annoying-ass cookie message
+      </label>
+      <label>
+        <input type="radio" value="necessary" x-model="cookieConsent">
+        Only cookies deemed necessary by the EU ePrivacy Directive 
+      </label>
+      <label>
+        <input type="radio" value="all" x-model="cookieConsent">
+        All cookies, including those used for anonymous and internal analytics (there is no marketing on this site)
+      </label>
+      <button @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
+    </div>
+    <div x-cloak x-show="cookieConsent === 'none' && !disableMessage" class="cookie-message"></div>
   </body>
 </html>
