@@ -12,7 +12,7 @@
 
   <!-- screen: menu, join, create, wait, setup, play, settings -->
   <body
-    x-data="{screen: 'menu', waitingId: null, cookieConsent: 'necessary', disableMessage: false, createGame(data) {
+    x-data="{screen: 'menu', waitingId: null, cookieConsent: 'necessary', needCookieConsent: false, disableMessage: false, createGame(data) {
     const url = new URL(window.backendUrl + '/create-game');
     url.searchParams.set('jupiter', data.jupiter);
     url.searchParams.set('easy', data.easy);
@@ -36,6 +36,7 @@
   init() {
     if (localStorage.getItem('wt_cookie-consent') === null) {
       this.screen = 'settings';
+      this.needCookieConsent = true;
     }
     this.cookieConsent = localStorage.getItem('wt_cookie-consent') ?? 'necessary';
   },
@@ -47,6 +48,7 @@
   },
   updateCookiePreference() {
     localStorage.setItem('wt_cookie-consent', this.cookieConsent);
+    this.needCookieConsent = false;
     if (this.cookieConsent === 'none') {
       this.removeAllCookies();
     } else if (this.cookieConsent === 'necessary') {
@@ -55,7 +57,7 @@
   }}"
   >
     <header>
-      <button @click="screen = 'menu'" x-show="screen !== 'menu'">Back to Menu</button>
+      <button @click="screen = 'menu'" x-show="!needCookieConsent && screen !== 'menu'">Back to Menu</button>
       <button @click="screen = 'settings'" x-show="screen === 'menu'">Settings</button>
     </header>
     <div x-cloak x-show="screen == 'menu'">
@@ -128,7 +130,7 @@
       </label>
       <label x-show="cookieConsent === 'none'">
         <input type="checkbox" x-model="disableMessage">
-        Disable annoying-ass cookie message
+        Disable annoying obnoxious cookie message
       </label>
       <label>
         <input type="radio" value="necessary" x-model="cookieConsent">
