@@ -7,7 +7,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background-color: #c7e;
+  background-color: #058cfd;
 }
 
 body > * {
@@ -33,7 +33,19 @@ body > * {
   & button {
     font-size: 1.5em;
     cursor: pointer;
+    border: 2px solid;
+    border-radius: 10px;
   }
+}
+
+#updatePreference{
+  border: 2px solid;
+  border-radius: 10px;
+
+}
+
+header > button {
+
 }
 
 .cookie-message {
@@ -53,6 +65,13 @@ body > * {
   letter-spacing: 2px;
   color: rgba(255, 255, 255, 0.15);
   z-index: 1;
+}
+
+.createGame{
+  background-color: transparent;
+  border: 3px solid;
+  padding: 5px;
+  border-radius: 10px;
 }
 
 .cookie-message::before {
@@ -101,7 +120,8 @@ body > * {
 }
 
 .game {
-  background: white;
+  background: transparent;
+  border: solid;
   border-radius: 1.5em;
   padding: 1em;
   display: inline-block;
