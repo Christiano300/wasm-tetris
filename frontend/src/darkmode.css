@@ -47,7 +47,7 @@
         background: #28153c;
         }
 
-    }
+
     .game {
         background: #28153c;
 
@@ -57,7 +57,6 @@
         }
 
         & button {
-            float: inline-end;
             color: white;
 
             border-radius: 0.5em;
