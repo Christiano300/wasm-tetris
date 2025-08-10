@@ -1,5 +1,24 @@
+@media (prefers-color-scheme: light) {
+  :root {
+    --text-color: black;
+    --background: #f2fffb;
+    --border-color: black;
+    --button-bg: #f2fffb;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-color: white;
+    --background: #05001e;
+    --border-color: white;
+    --button-bg: #28153c;
+  }
+}
+
 * {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-color);
 }
 
 html,
@@ -7,7 +26,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background-color: #058cfd;
+  background-color: var(--background);
 }
 
 body > * {
@@ -19,6 +38,12 @@ body > * {
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+header > button {
+  background-color: transparent;
+  border: 2px solid var(--border-color);
+  font-size: 1.3em;
 }
 
 .center {
@@ -33,19 +58,17 @@ body > * {
   & button {
     font-size: 1.5em;
     cursor: pointer;
-    border: 2px solid;
+    padding: 5px;
+    background-color: var(--button-bg);
+    border: 2px solid var(--border-color);
     border-radius: 10px;
   }
 }
 
-#updatePreference{
+#updatePreference {
   border: 2px solid;
   border-radius: 10px;
-
-}
-
-header > button {
-
+  background-color: var(--button-bg);
 }
 
 .cookie-message {
@@ -67,10 +90,10 @@ header > button {
   z-index: 1;
 }
 
-.createGame{
-  background-color: transparent;
-  border: 3px solid;
+.createGame {
+  border: 3px solid var(--border-color);
   padding: 5px;
+  background: var(--button-bg);
   border-radius: 10px;
 }
 
@@ -98,7 +121,7 @@ header > button {
   }
 }
 
-@keyframes moveText  {
+@keyframes moveText {
   0% {
     transform: rotate(120deg) translateX(30vw) translateY(20vh);
   }
@@ -106,13 +129,13 @@ header > button {
     transform: translateX(-25vw) translateY(-12vh);
   }
   50% {
-    transform: rotate(210deg)
+    transform: rotate(210deg);
   }
   70% {
     transform: translateX(10vw) translateY(6vh);
   }
   90% {
-    transform: rotate(-90deg)
+    transform: rotate(-90deg);
   }
   100% {
     transform: translateX(30vw) translateY(-10vw) rotate(0deg);
@@ -120,8 +143,8 @@ header > button {
 }
 
 .game {
-  background: transparent;
-  border: solid;
+  border: solid var(--border-color);
+  background: var(--button-bg);
   border-radius: 1.5em;
   padding: 1em;
   display: inline-block;
