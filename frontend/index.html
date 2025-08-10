@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script defer type="module" src="/src/index.ts"></script>
     <link rel="stylesheet" href="/src/style.css" />
-    <link rel="stylesheet" href="/src/darkmode.css" />
-    <link rel="stylesheet" href="/src/lightmode.css" />
     <title>Tetris</title>
     <meta name="description" content="Tetris game with multiplayer support using WebSockets.">
   </head>
@@ -105,10 +103,10 @@
           <input type="checkbox" x-model="random" />
           Random: No Bag system, pieces are completely random
         </label>
-      <button class="createGame" x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
+      <button class="create-game" x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
         Create Game
       </button>
-      <button class="createGame"
+      <button class="create-game"
         x-show="screen == 'setup'"
         @click="$store.client.runSinglePlayer($data); screen = 'play'"
       >
@@ -142,7 +140,7 @@
         <input type="radio" value="all" x-model="cookieConsent">
         All cookies, including those used for anonymous and internal analytics (there is no marketing on this site)
       </label>
-      <button id="updatePreference" @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
+      <button id="update-preference" @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
     </div>
     <div x-cloak x-show="cookieConsent === 'none' && !disableMessage" class="cookie-message"></div>
   </body>
