@@ -103,10 +103,10 @@
           <input type="checkbox" x-model="random" />
           Random: No Bag system, pieces are completely random
         </label>
-      <button x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
+      <button class="create-game" x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
         Create Game
       </button>
-      <button
+      <button class="create-game"
         x-show="screen == 'setup'"
         @click="$store.client.runSinglePlayer($data); screen = 'play'"
       >
@@ -140,7 +140,7 @@
         <input type="radio" value="all" x-model="cookieConsent">
         All cookies, including those used for anonymous and internal analytics (there is no marketing on this site)
       </label>
-      <button @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
+      <button id="update-preference" @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
     </div>
     <div x-cloak x-show="cookieConsent === 'none' && !disableMessage" class="cookie-message"></div>
   </body>
