@@ -84,7 +84,7 @@ header {
 .page {
   max-width: 50rem;
   width: 100%;
-  min-height: calc(100vh - 8rem);
+  min-height: calc(100vh - 17rem);
   display: flex;
   flex-direction: column;
   padding: 1rem;
@@ -92,6 +92,24 @@ header {
   justify-content: center;
   margin: auto;
   margin-bottom: 0;
+}
+
+.menu .title {
+  font-size: 4rem;
+  text-align: center;
+  margin: 0;
+  letter-spacing: .5rem;
+  color: var(--highlighted);
+}
+
+.menu .subtitle {
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 0;
+  margin-top: .5rem;
+  letter-spacing: .2rem;
+  color: var(--text);
+  font-weight: normal;
 }
 
 button {

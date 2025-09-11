@@ -81,6 +81,10 @@
     </div>
   </div>
   <div class="page">
+    <div class="menu" x-show="screen=='menu'">
+      <h1 class="title">WASM TETRIS</h1>
+      <p class="subtitle">by Christian Patzl</p>
+    </div>
     <div x-cloak class="form" x-show="screen == 'create' || screen == 'setup'"
       x-data="{jupiter: false, easy: false, nes: false, random: false}">
       <label>
