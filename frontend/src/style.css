@@ -16,10 +16,12 @@
 * {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   color: var(--text);
+  overflow: hidden;
 }
 
 body {
   background-color: var(--bg-color);
+  margin: 0;
 }
 
 .form {
@@ -51,7 +53,6 @@ header {
   margin-left: -0.5rem;
   margin-right: 0.5rem;
 }
-
 
 .game {
   box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
@@ -92,6 +93,10 @@ header {
   justify-content: center;
   margin: auto;
   margin-bottom: 0;
+}
+
+*[x-cloak] {
+  display: none !important;
 }
 
 .menu .title {

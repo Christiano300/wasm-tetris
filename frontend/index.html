@@ -68,7 +68,7 @@
     this.removeExtraCookies();
   }
   }}">
-  <header>
+  <header x-show="screen !== 'play'">
     <button @click="screen = 'menu'" x-show="!needCookieConsent && screen !== 'menu'">
       <span class="back-icon" />
       Back to Menu</button>
@@ -128,7 +128,7 @@
       <p x-text="'Your id: ' + (waitingId ?? 'Loading...')"></p>
     </div>
     <div x-cloak x-show="screen == 'play'" class="tetris">
-      <canvas width="1000" height="700"></canvas>
+      <canvas width="700" height="700"></canvas>
     </div>
     <div x-cloak x-show="screen == 'settings'" class="form">
       <h1>Settings</h1>
