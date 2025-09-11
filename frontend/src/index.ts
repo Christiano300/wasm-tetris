@@ -56,7 +56,13 @@ globalThis.tetris_prompt = (text: string) => {
   return prompt(text);
 };
 
-await init();
+declare global {
+  interface ImportMeta {
+    env: any;
+  }
+}
+
+await init(import.meta.env.DEV ? "lib_bg.wasm" : location.pathname +  "/assets/lib_bg.wasm");
 
 init_panic_hook();
 
