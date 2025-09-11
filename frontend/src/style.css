@@ -1,75 +1,129 @@
-@media (prefers-color-scheme: light) {
-  :root {
-    --text-color: black;
-    --background: #f2fffb;
-    --border-color: black;
-    --button-bg: #f2fffb;
-  }
+:root {
+  --text: #110804;
+  --bg-color: #fcf6f2;
+  --highlighted: #cf6e3f;
+  --secondary: #c6e390;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text-color: white;
-    --background: #05001e;
-    --border-color: white;
-    --button-bg: #28153c;
-  }
+/* dark mode */
+:root[data-theme='dark'] {
+  --text: #e3e6e8;
+  --bg-color: #0d0f12;
+  --highlighted: #09a520;
+  --secondary: #4f46e5;
 }
 
 * {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  color: var(--text-color);
+  color: var(--text);
 }
 
-html,
 body {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-  background-color: var(--background);
+  background-color: var(--bg-color);
 }
 
-body > * {
-  z-index: 2;
-  position: relative;
-}
-
-.tetris {
+.form {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  gap: .5rem;
 }
 
-header > button {
-  background-color: transparent;
-  border: 2px solid var(--border-color);
-  font-size: 1.3em;
+.back-icon:before {
+  content: "← ";
 }
 
-.center {
+.back-icon::before {
+  margin-left: 0;
+  margin-right: 0;
+  transition: margin .2s ease-in-out;
+}
+
+header {
   display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
+  justify-content: space-between;
   align-items: center;
-  max-width: 60em;
-  column-gap: 5em;
-  margin: 5em auto;
-
-  & button {
-    font-size: 1.5em;
-    cursor: pointer;
-    padding: 5px;
-    background-color: var(--button-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 10px;
-  }
+  padding: 1rem;
+  border-bottom: 2px solid var(--highlighted);
 }
 
-#update-preference {
-  border: 2px solid;
-  border-radius: 10px;
-  background-color: var(--button-bg);
+/* increase padding left on parent hover */
+.back-icon:hover:before {
+  margin-left: -0.5rem;
+  margin-right: 0.5rem;
 }
+
+
+.game {
+  box-shadow: rgba(60, 64, 67, 0.3) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
+  border-radius: .5rem;
+  padding: 1rem;
+  transition: box-shadow .1s ease-in-out;
+}
+
+.game:hover {
+  box-shadow: rgba(60, 64, 67, 0.694) 0px 1px 2px 0px, rgba(60, 64, 67, 0.15) 0px 1px 3px 1px;
+}
+
+.game h2 {
+  margin-top: 0;
+}
+
+.game button {
+  width: 100%;
+}
+
+#games-list {
+  display: flex;
+  padding: 1rem;
+  gap: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 1rem;
+}
+
+.page {
+  max-width: 50rem;
+  width: 100%;
+  min-height: calc(100vh - 8rem);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  margin-bottom: 0;
+}
+
+button {
+  background-color: var(--highlighted);
+  color: var(--bg-color);
+  border: none;
+  padding: .5rem 1rem;
+  border-radius: .25rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: scale .1s ease-in-out;
+}
+
+button:hover {
+  scale: 1.01;
+  box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 8px 0px;
+}
+
+input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--highlighted);
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  accent-color: var(--highlighted);
+  cursor: pointer;
+}
+
 
 .cookie-message {
   position: fixed;
@@ -88,13 +142,7 @@ header > button {
   letter-spacing: 2px;
   color: rgba(255, 255, 255, 0.15);
   z-index: 1;
-}
-
-.create-game {
-  border: 3px solid var(--border-color);
-  padding: 5px;
-  background: var(--button-bg);
-  border-radius: 10px;
+  pointer-events: none;
 }
 
 .cookie-message::before {
@@ -110,12 +158,15 @@ header > button {
   0% {
     transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
   }
+
   40% {
     transform: rotateY(0deg) rotateX(300deg);
   }
+
   50% {
     transform: rotateX(360deg);
   }
+
   100% {
     transform: rotateX(0deg) rotateZ(720deg) rotateY(360deg);
   }
@@ -125,48 +176,24 @@ header > button {
   0% {
     transform: rotate(120deg) translateX(30vw) translateY(20vh);
   }
+
   30% {
     transform: translateX(-25vw) translateY(-12vh);
   }
+
   50% {
     transform: rotate(210deg);
   }
+
   70% {
     transform: translateX(10vw) translateY(6vh);
   }
+
   90% {
     transform: rotate(-90deg);
   }
+
   100% {
     transform: translateX(30vw) translateY(-10vw) rotate(0deg);
   }
-}
-
-.game {
-  border: solid var(--border-color);
-  background: var(--button-bg);
-  border-radius: 1.5em;
-  padding: 1em;
-  display: inline-block;
-
-  & h2 {
-    margin: 0;
-  }
-
-  & button {
-    float: inline-end;
-    border-radius: 0.5em;
-  }
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 1em;
-  margin: 5em auto;
-  width: fit-content;
-}
-
-[x-cloak] {
-  display: none !important;
 }

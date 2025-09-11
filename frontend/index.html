@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script defer type="module" src="/src/index.ts"></script>
-    <link rel="stylesheet" href="/src/style.css" />
-    <title>Tetris</title>
-    <meta name="description" content="Tetris game with multiplayer support using WebSockets.">
-  </head>
 
-  <!-- screen: menu, join, create, wait, setup, play, settings -->
-  <body
-    x-data="{screen: 'menu', waitingId: null, cookieConsent: 'necessary', needCookieConsent: false, disableMessage: false, createGame(data) {
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script defer type="module" src="/src/index.ts"></script>
+  <link rel="stylesheet" href="/src/style.css" />
+  <title>Tetris</title>
+  <meta name="description" content="Tetris game with multiplayer support using WebSockets.">
+</head>
+
+<!-- screen: menu, join, create, wait, setup, play, settings -->
+
+<body x-data="{screen: 'menu', waitingId: null, cookieConsent: 'necessary', needCookieConsent: false, disableMessage: false, createGame(data) {
     const url = new URL(window.backendUrl + '/create-game');
     url.searchParams.set('jupiter', data.jupiter);
     url.searchParams.set('easy', data.easy);
@@ -54,62 +55,55 @@
     } else if (this.cookieConsent === 'necessary') {
       this.removeExtraCookies();
     }
-  }}"
-  >
-    <header>
-      <button @click="screen = 'menu'" x-show="!needCookieConsent && screen !== 'menu'">Back to Menu</button>
-      <button @click="screen = 'settings'" x-show="screen === 'menu'">Settings</button>
-    </header>
+  }}">
+  <header>
+    <button @click="screen = 'menu'" x-show="!needCookieConsent && screen !== 'menu'">
+      <span class="back-icon" />
+      Back to Menu</button>
+    <button @click="screen = 'settings'" x-show="screen === 'menu'">Settings</button>
     <div x-cloak x-show="screen == 'menu'">
-      <div class="center">
-        <button @click="screen = 'create'">Create Game</button>
-        <button @click="screen = 'join'">Join Game</button>
-        <button @click="screen = 'setup'">Play singleplayer</button>
-      </div>
+      <button @click="screen = 'create'">Create Game</button>
+      <button @click="screen = 'join'">Join Game</button>
+      <button @click="screen = 'setup'">Play singleplayer</button>
     </div>
-    <div x-cloak x-show="screen == 'join'" x-data="games">
-      <div class="center">
-        <p x-show="games.length === 0">No games right now...</p>
-        <template x-for="game in games" :key="game.id">
-          <div class="game">
-            <h2 x-text="game.id"></h2>
-            <button
-              @click="$store.client.joinAndConnect(game.id); screen = 'play'"
-            >
-              Join
-            </button>
-          </div>
-        </template>
-      </div>
+  </header>
+  <div x-cloak x-show="screen == 'join'" x-data="games">
+    <div class="center" id="games-list">
+      <p x-show="games.length === 0">No games right now...</p>
+      <template x-for="game in games" :key="game.id">
+        <div class="game">
+          <h2 x-text="game.id"></h2>
+          <button @click="$store.client.joinAndConnect(game.id); screen = 'play'">
+            Join
+          </button>
+        </div>
+      </template>
     </div>
-    <div
-      x-cloak class="form"
-      x-show="screen == 'create' || screen == 'setup'"
-      x-data="{jupiter: false, easy: false, nes: false, random: false}"
-    >
-        <label>
-          <input type="checkbox" x-model="jupiter" />
-          Jupiter: Your are always holding down
-        </label>
-        <label>
-          <input type="checkbox" x-model="easy" />
-          Easy: No levelup for you
-        </label>
-        <label>
-          <input type="checkbox" x-model="nes" />
-          NES: The pieces are sticky
-        </label>
-        <label>
-          <input type="checkbox" x-model="random" />
-          Random: No Bag system, pieces are completely random
-        </label>
+  </div>
+  <div class="page">
+    <div x-cloak class="form" x-show="screen == 'create' || screen == 'setup'"
+      x-data="{jupiter: false, easy: false, nes: false, random: false}">
+      <label>
+        <input type="checkbox" x-model="jupiter" />
+        Jupiter: Your are always holding down
+      </label>
+      <label>
+        <input type="checkbox" x-model="easy" />
+        Easy: No levelup for you
+      </label>
+      <label>
+        <input type="checkbox" x-model="nes" />
+        NES: The pieces are sticky
+      </label>
+      <label>
+        <input type="checkbox" x-model="random" />
+        Random: No Bag system, pieces are completely random
+      </label>
       <button class="create-game" x-show="screen == 'create'" @click="createGame($data); screen = 'wait'">
         Create Game
       </button>
-      <button class="create-game"
-        x-show="screen == 'setup'"
-        @click="$store.client.runSinglePlayer($data); screen = 'play'"
-      >
+      <button class="create-game" x-show="screen == 'setup'"
+        @click="$store.client.runSinglePlayer($data); screen = 'play'">
         Create Game
       </button>
     </div>
@@ -122,6 +116,12 @@
     </div>
     <div x-cloak x-show="screen == 'settings'" class="form">
       <h1>Settings</h1>
+      <label>
+        <input type="checkbox" x-model="darkMode"
+          x-init="darkMode = (localStorage.getItem('wt_dark') === '1'); if (darkMode) document.documentElement.setAttribute('data-theme','dark')"
+          @change="localStorage.setItem('wt_dark', darkMode ? '1' : '0'); if (darkMode) document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme')" />
+        Dark mode
+      </label>
       <h3>Cookie preferences</h3>
       <p>Which cookies do you want to enable?</p>
       <label>
@@ -134,7 +134,7 @@
       </label>
       <label>
         <input type="radio" value="necessary" x-model="cookieConsent">
-        Only cookies deemed necessary by the EU ePrivacy Directive 
+        Only cookies deemed necessary by the EU ePrivacy Directive
       </label>
       <label>
         <input type="radio" value="all" x-model="cookieConsent">
@@ -143,5 +143,7 @@
       <button id="update-preference" @click="screen = 'menu'; updateCookiePreference()">Save and return to menu</button>
     </div>
     <div x-cloak x-show="cookieConsent === 'none' && !disableMessage" class="cookie-message"></div>
-  </body>
+  </div>
+</body>
+
 </html>
