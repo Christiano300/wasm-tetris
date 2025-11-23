@@ -220,6 +220,17 @@ impl Instance {
         }
         game.get_or_insert(Game::new(settings));
     }
+
+    #[wasm_bindgen]
+    pub async fn goodbye(&mut self) {
+        if let Ok(mut game) = self.game.try_borrow_mut() {
+            *game = None
+        }
+
+        if let Ok(mut session) = self.session.try_borrow_mut() {
+            *session = None
+        }
+    }
 }
 
 async fn conn_loop_static(

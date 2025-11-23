@@ -69,7 +69,7 @@
   }
   }}">
   <header>
-    <button @click="screen = 'menu'" x-show="!needCookieConsent && screen !== 'menu'">
+    <button @click="screen = 'menu'; $store.client.stopEverything()" x-show="!needCookieConsent && screen !== 'menu'">
       <span class="back-icon" />
       Back to Menu</button>
     <button @click="screen = 'settings'" x-show="screen === 'menu'">Settings</button>

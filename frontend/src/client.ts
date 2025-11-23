@@ -1,7 +1,7 @@
 import Alpine from "alpinejs";
 import "./index";
 
-export function initAlpine(connect: (game: string) => void, runSinglePlayer: (settings: any) => void) {
+export function initAlpine(connect: (game: string) => void, runSinglePlayer: (settings: any) => void, stopEverything: () => void) {
   Alpine.store("client", {
     async joinAndConnect(gameId: string) {
       const id = await (await fetch(window.backendUrl + "/join-game/" + gameId)).json();
@@ -10,7 +10,9 @@ export function initAlpine(connect: (game: string) => void, runSinglePlayer: (se
 
     connect,
 
-    runSinglePlayer
+    runSinglePlayer,
+
+    stopEverything
   })
 
   Alpine.data("games", () => ({

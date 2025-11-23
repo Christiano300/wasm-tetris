@@ -190,7 +190,7 @@ impl DrawingContext {
 
     pub fn draw_score(ctx: &CanvasRenderingContext2d, score: u32, x: f64, y: f64) {
         ctx.clear_rect(x, y, 240., 30.);
-        ctx.set_fill_style_str("#000");
+        ctx.set_fill_style_str("#099520");
         ctx.set_text_baseline("top");
         ctx.set_font("25px sans-serif");
         let _ = ctx.fill_text_with_max_width(&format!("Score: {score}"), x, y, 240.);
@@ -212,7 +212,7 @@ impl DrawingContext {
     pub fn draw_level(ctx: &CanvasRenderingContext2d, level: u8, x: f64, y: f64) {
         let text_width = 100.;
         ctx.clear_rect(x - text_width, y, text_width, 30.);
-        ctx.set_fill_style_str("#000");
+        ctx.set_fill_style_str("#099520");
         ctx.set_text_baseline("top");
         ctx.set_font("25px sans-serif");
         ctx.set_text_align("right");

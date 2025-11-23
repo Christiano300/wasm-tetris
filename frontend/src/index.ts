@@ -20,6 +20,7 @@ const joinGame = async (gameId: string) => {
   }
   pressedKeys.clear();
   try {
+    console.log("Connecting to game ", gameId);
     game
       .connect(gameId)
       .then(startGame);
@@ -38,8 +39,15 @@ const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
   startGame();
 };
 
+const stopEverything = () => {
+  console.log("Stopping everything");
+  running = false;
+  pressedKeys.clear();
+  game.goodbye();
+}
+
 document.addEventListener("alpine:init", () => {
-  initAlpine(joinGame, runSinglePlayer);
+  initAlpine(joinGame, runSinglePlayer, stopEverything);
 });
 
 window.Alpine = Alpine;
@@ -98,7 +106,9 @@ let running = false;
 var then = window.performance.now();
 
 function startGame() {
+  console.log("starting game")
   running = true;
+  console.log("Running")
   then = window.performance.now();
   requestAnimationFrame(update);
 }
@@ -121,6 +131,9 @@ async function update(newtime: number) {
   ];
   while (elapsed > fpsInterval) {
     running = await game.update(new FrameInputs(...keys));
+    if (!running) {
+      console.log("Game ended");
+    }
     elapsed -= fpsInterval;
   }
   if (running) requestAnimationFrame(update);

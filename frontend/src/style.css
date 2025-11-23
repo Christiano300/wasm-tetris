@@ -150,7 +150,7 @@ input[type="checkbox"] {
   width: 100vw;
   height: 100vh;
 
-  animation: spin 20s ease infinite alternate;
+  animation: spin 30s ease infinite alternate;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -167,7 +167,7 @@ input[type="checkbox"] {
   content: "YOUR SETTINGS WILL NOT BE SAVED BECAUSE YOU HAVE NOT ACCEPTED COOKIES";
   width: 30em;
   text-align: center;
-  animation: moveText 3s ease-in-out infinite alternate;
+  animation: moveText 6s ease infinite alternate;
   color: rgb(226, 17, 121);
   z-index: -1;
 }

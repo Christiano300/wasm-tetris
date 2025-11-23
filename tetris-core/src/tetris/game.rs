@@ -244,9 +244,8 @@ impl Game {
                     self.movement(move_success);
                 }
                 Action::Ccw => {
-                    // let move_success = self.rotate(Direction::Ccw);
-                    // self.movement(move_success);
-                    self.garbage_acc += 1;
+                    let move_success = self.rotate(Direction::Ccw);
+                    self.movement(move_success);
                 }
                 Action::Hold => {
                     if !self.can_hold {

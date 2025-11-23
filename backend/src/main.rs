@@ -6,14 +6,13 @@ use actix_web::{
 use broadcast::Broadcaster;
 use game::Game;
 use log::info;
+use persistent_kv::{Config, PersistentKeyValueStore};
 use proto::TetrisSocket;
 use rand::{distr::Alphanumeric, Rng};
 use replace_with::replace_with_or_abort;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{
     collections::{BTreeSet, HashMap},
-    fs::File,
-    io::Write,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -27,7 +26,15 @@ mod game;
 mod proto;
 mod ws;
 
-static SAVE_PATH: &str = "/home/christian/tetris_leaderboard.json";
+type Store = PersistentKeyValueStore<String, String>;
+
+#[cfg(windows)]
+static SAVE_PATH: &str = "tetris_leaderboard.store";
+
+#[cfg(not(windows))]
+static SAVE_PATH: &str = "/home/christian/tetris_leaderboard.store";
+
+static STORE_TOKEN: &str = "b";
 
 #[derive(Deserialize)]
 struct HighscoreReq {
@@ -36,26 +43,20 @@ struct HighscoreReq {
     score: u32,
 }
 
+#[derive(Debug)]
 struct Leaderboard {
     board: Mutex<BTreeSet<(u32, String)>>,
 }
 
-impl Serialize for Leaderboard {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        BTreeSet::serialize(&self.board.blocking_lock(), serializer)
+impl Leaderboard {
+    pub async fn serialize(&self) -> serde_json::Result<String> {
+        let board = self.board.lock().await;
+        serde_json::to_string(&*board)
     }
-}
 
-impl<'de> Deserialize<'de> for Leaderboard {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    pub fn deserialize(s: &str) -> serde_json::Result<Leaderboard> {
         Ok(Self {
-            board: Mutex::new(BTreeSet::deserialize(deserializer)?),
+            board: Mutex::new(serde_json::from_str(s)?),
         })
     }
 }
@@ -102,15 +103,6 @@ fn get_id() -> String {
     (0..10)
         .map(|_| random.sample(Alphanumeric) as char)
         .collect()
-}
-
-fn save(leaderboard: &Leaderboard) {
-    let mut file = File::create(SAVE_PATH).expect("Could not open file");
-    let s = serde_json::to_string::<Leaderboard>(leaderboard).expect("Serialization failed");
-    file.write_all(s.as_bytes())
-        .expect("Failed to write to file");
-    file.flush().expect("Failed to flush");
-    file.sync_all().expect("Falied to sync");
 }
 
 fn try_auth(req: &HighscoreReq) -> bool {
@@ -327,14 +319,27 @@ async fn board_index(state: web::Data<Leaderboard>) -> Result<impl Responder, Er
 }
 
 #[post("/highscore")]
-async fn highscore(info: web::Json<HighscoreReq>, state: web::Data<Leaderboard>) -> impl Responder {
+async fn highscore(
+    info: web::Json<HighscoreReq>,
+    state: web::Data<Leaderboard>,
+    store: web::Data<Store>,
+) -> impl Responder {
     if !try_auth(&info) {
         return HttpResponse::Unauthorized().finish();
     }
     let mut board = state.board.lock().await;
     board.insert((info.score, info.name.clone()));
     drop(board);
-    save(&state);
+    let leaderboard = &state;
+    store
+        .set(
+            STORE_TOKEN,
+            leaderboard
+                .serialize()
+                .await
+                .expect("could not serialize leaderboard"),
+        )
+        .expect("falied to set store item");
 
     HttpResponse::Ok().finish()
 }
@@ -342,9 +347,10 @@ async fn highscore(info: web::Json<HighscoreReq>, state: web::Data<Leaderboard>)
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    let state = web::Data::new(match File::open(SAVE_PATH) {
-        Ok(file) => serde_json::from_reader(file).expect("Invalid save file"),
-        Err(_) => Leaderboard {
+    let store = Store::new(SAVE_PATH, Config::default()).expect("Could not create store");
+    let state = web::Data::new(match store.get(STORE_TOKEN) {
+        Some(l) => Leaderboard::deserialize(&l).expect("failed to deserialize leaderboard"),
+        None => Leaderboard {
             board: Mutex::new(BTreeSet::new()),
         },
     });
@@ -352,6 +358,8 @@ async fn main() -> std::io::Result<()> {
         games: Mutex::new(HashMap::new()),
         broadcaster: Broadcaster::create(),
     });
+    let store = web::Data::new(store);
+    info!("{state:?}");
     info!("Server starting");
     HttpServer::new(move || {
         App::new()
@@ -370,6 +378,7 @@ async fn main() -> std::io::Result<()> {
             .service(all_games)
             .app_data(state.clone())
             .app_data(games.clone())
+            .app_data(store.clone())
     })
     // .bind(("localhost", 4444))?
     // .bind(("172.21.49.178", 4444))?
