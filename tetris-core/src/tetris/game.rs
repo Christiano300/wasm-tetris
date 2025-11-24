@@ -1,9 +1,9 @@
 #[cfg(feature = "wasm-bindgen")]
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use rand::prelude::{Rng, ThreadRng};
+use rand::{SeedableRng, prelude::Rng, rngs::SmallRng};
 use serde::{Deserialize, Serialize};
-use std::{collections::VecDeque, mem};
+use std::collections::VecDeque;
 
 use super::{Board, Direction, Mino, Tetrimino};
 
@@ -11,6 +11,8 @@ const LOCKDOWN_START: u8 = 30;
 const SOFT_FALL_MULT: u8 = 10;
 const LOCKDOWN_MOVES: u8 = 5;
 const LEVEL_GOAL: i8 = 5;
+
+pub type RandomSeed = [u8; 32];
 
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
@@ -31,6 +33,35 @@ impl GameSettings {
             nes,
             random,
         }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct GameConfig {
+    pub settings: GameSettings,
+    pub seed: Option<RandomSeed>,
+}
+
+impl GameConfig {
+    pub fn default_seed(settings: GameSettings) -> Self {
+        Self {
+            settings,
+            seed: None,
+        }
+    }
+
+    pub fn with_seed(settings: GameSettings, seed: RandomSeed) -> Self {
+        Self {
+            settings,
+            seed: Some(seed),
+        }
+    }
+}
+
+pub fn getrandom(seed: Option<RandomSeed>) -> SmallRng {
+    match seed {
+        Some(seed) => SmallRng::from_seed(seed),
+        None => SmallRng::from_os_rng(),
     }
 }
 
@@ -76,7 +107,8 @@ pub struct Game {
     lockdown_moves: u8,
     lockdown_y: i8,
     level_goal: i8,
-    rand: ThreadRng,
+    piece_rng: SmallRng,
+    garbage_rng: SmallRng,
     pub done: bool,
     pub garbage_slot: u8,
     pub garbage_acc: u8,
@@ -85,7 +117,7 @@ pub struct Game {
 }
 
 impl Game {
-    pub fn new(settings: GameSettings) -> Self {
+    pub fn new(config: GameConfig) -> Self {
         let mut new = Self {
             board: Board::default(),
             piece: Tetrimino::new(Mino::I, 0, 0),
@@ -110,14 +142,15 @@ impl Game {
             lockdown_moves: LOCKDOWN_MOVES,
             lockdown_y: 0,
             level_goal: LEVEL_GOAL,
-            rand: rand::rng(),
+            piece_rng: getrandom(config.seed),
+            garbage_rng: getrandom(config.seed),
             done: false,
             events: vec![],
             garbage_slot: 0,
             garbage_acc: 0,
-            settings,
+            settings: config.settings,
         };
-        let mut rng = rand::rng();
+        let mut rng = getrandom(config.seed);
         new.garbage_slot = rng.random_range(1..9);
 
         for _ in 0..5 {
@@ -217,12 +250,11 @@ impl Game {
 impl Game {
     fn add_garbage(&mut self) {
         self.board.push_up(self.garbage_acc);
-        let mut rng = rand::rng();
         for i in 0..self.garbage_acc {
             let layer = 40 - i - 1;
             self.board.add_garbage(layer, self.garbage_slot);
-            if rng.random_bool(0.3) {
-                self.garbage_slot = rng.random_range(0..10);
+            if self.garbage_rng.random_bool(0.3) {
+                self.garbage_slot = self.garbage_rng.random_range(0..10);
             }
         }
         self.garbage_acc = 0;
@@ -257,10 +289,7 @@ impl Game {
                         let piece = self.get_next_piece();
                         self.next_piece(piece);
                     } else {
-                        let piece = mem::replace(
-                            &mut self.hold,
-                            Some(Tetrimino::new(self.piece.kind, 0, 0)),
-                        );
+                        let piece = self.hold.replace(Tetrimino::new(self.piece.kind, 0, 0));
 
                         self.next_piece(piece.unwrap());
                     }
@@ -281,11 +310,12 @@ impl Game {
                 }
             }
         }
-        if self.settings.jupiter && !actions.contains(&Action::SoftDrop) {
-            if let Phase::Falling { timer } = self.phase {
-                let new = timer.saturating_sub(SOFT_FALL_MULT - 1);
-                self.phase = Phase::Falling { timer: new }
-            }
+        if self.settings.jupiter
+            && !actions.contains(&Action::SoftDrop)
+            && let Phase::Falling { timer } = self.phase
+        {
+            let new = timer.saturating_sub(SOFT_FALL_MULT - 1);
+            self.phase = Phase::Falling { timer: new }
         }
     }
 
@@ -337,7 +367,7 @@ impl Game {
 
     fn next_kind(&mut self) -> Mino {
         if self.settings.random {
-            return self.bag[self.rand.random_range(0..7)];
+            return self.bag[self.piece_rng.random_range(0..7)];
         }
         if self.bag_idx < 7 {
             let next = self.bag[self.bag_idx];
@@ -345,7 +375,7 @@ impl Game {
             return next;
         }
         for i in 0..7 {
-            let swap = self.rand.random_range(i..7);
+            let swap = self.piece_rng.random_range(i..7);
             self.bag.swap(i, swap);
         }
         self.bag_idx = 1;

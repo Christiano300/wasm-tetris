@@ -120,12 +120,12 @@ impl<'de> Deserialize<'de> for Board {
                 let mut board = [[Mino::Empty; BOARD_WIDTH]; BOARD_HEIGHT];
                 let mut len = 0;
 
-                for i in 0..BOARD_HEIGHT {
-                    for j in 0..BOARD_WIDTH {
-                        let Some(cell) = seq.next_element()? else {
+                for row in board.iter_mut() {
+                    for cell in row {
+                        let Some(mino) = seq.next_element()? else {
                             return Err(de::Error::invalid_length(len, &WrongTupleLen));
                         };
-                        board[i][j] = cell;
+                        *cell = mino;
                         len += 1;
                     }
                 }

@@ -140,6 +140,7 @@ impl DrawingContext {
         off_y: f64,
     ) {
         for row in 0..20 {
+            #[allow(clippy::needless_range_loop)]
             for col in 0..10 {
                 let mino = field[row + 20][col];
                 let Some(image) = self.get_mino_image(mino) else {

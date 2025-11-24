@@ -8,6 +8,9 @@
 - [ ] Keymap
 - [x] Multiplayer 
 - [ ] Pause
-- [ ] Random Seed
+- [x] Random Seed
 - [ ] Visible Game settings
-- [ ] Username
+- [ ] Win Screen
+- [ ] NES Fix
+- [ ] Fix Unpacked CBOR Encoding
+- [ ] Fix "RefCell is held across await point"

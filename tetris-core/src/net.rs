@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tetris::{Board, GameSettings};
+use crate::tetris::{Board, GameConfig};
 
 #[derive(Serialize, Deserialize)]
 pub enum Message {
-    Start(GameSettings),
+    Start(GameConfig),
     LineSend(u8),
     GameState(Box<Board>),
     Gameover,

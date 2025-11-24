@@ -18,6 +18,7 @@ declare global {
 }
 
 window.backendUrl = "https://tetris.patzl.dev";
+// window.backendUrl = "http://" + location.hostname + ":4444";
 
 const joinGame = async (gameId: string) => {
   if (running) {

@@ -17,7 +17,7 @@ use crate::{
 use js_sys::Function;
 use tetris_core::{
     net::Message,
-    tetris::{Board, Event, Game, GameSettings, Phase},
+    tetris::{Board, Event, Game, GameConfig, GameSettings, Phase},
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
@@ -212,18 +212,19 @@ impl Instance {
 
     #[wasm_bindgen]
     pub fn start_singleplayer(&self, settings: GameSettings) -> bool {
+        let config = GameConfig::default_seed(settings);
         let Ok(mut game) = self.game.try_borrow_mut() else {
             return false;
         };
         if game.is_some() {
             return false;
         }
-        game.get_or_insert(Game::new(settings));
+        game.get_or_insert(Game::new(config));
         true
     }
 
     #[wasm_bindgen]
-    pub async fn goodbye(&mut self) {
+    pub fn goodbye(&self) {
         let mut game = self.game.borrow_mut();
         *game = None;
         if let Some(mut session) = self.session.borrow_mut().take() {

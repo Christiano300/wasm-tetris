@@ -5,14 +5,19 @@ use serde::Serialize;
 use std::fmt::Debug;
 
 use crate::proto::TetrisSocket;
-use tetris_core::{net::Message, tetris::GameSettings};
+use tetris_core::{
+    net::Message,
+    tetris::{GameConfig, GameSettings},
+};
 
 pub enum Game {
+    /// One player is waiting, this is the lobby
     Waiting {
         p1: Session,
         id: String,
         settings: GameSettings,
     },
+    /// Second player joins the game, waiting for both websockets to connect
     Ready {
         p1: Option<Session>,
         p1_id: String,
@@ -21,11 +26,12 @@ pub enum Game {
         id: String,
         settings: GameSettings,
     },
+    /// Both clients have connected, as soon as this is reached, the start command is sent
     Running {
         p1: TetrisSocket,
         p2: TetrisSocket,
         id: String,
-        settings: GameSettings,
+        config: GameConfig,
     },
 }
 
@@ -71,9 +77,8 @@ impl Game {
 
     pub fn get_settings(&self) -> &GameSettings {
         match &self {
-            Game::Waiting { settings, .. }
-            | Game::Ready { settings, .. }
-            | Game::Running { settings, .. } => settings,
+            Game::Waiting { settings, .. } | Game::Ready { settings, .. } => settings,
+            Game::Running { config, .. } => &config.settings,
         }
     }
 
@@ -97,12 +102,9 @@ impl Game {
     }
 
     pub async fn start(&mut self) {
-        if let Game::Running {
-            p1, p2, settings, ..
-        } = self
-        {
-            let _ = p1.send(&Message::Start(*settings)).await;
-            let _ = p2.send(&Message::Start(*settings)).await;
+        if let Game::Running { p1, p2, config, .. } = self {
+            let _ = p1.send(&Message::Start(*config)).await;
+            let _ = p2.send(&Message::Start(*config)).await;
         }
     }
 

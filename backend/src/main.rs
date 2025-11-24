@@ -16,7 +16,7 @@ use std::{
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
-use tetris_core::tetris::GameSettings;
+use tetris_core::tetris::{GameConfig, GameSettings, RandomSeed};
 use tokio::sync::Mutex;
 use ws::{ws_running, ws_waiting};
 
@@ -118,6 +118,13 @@ fn try_auth(req: &HighscoreReq) -> bool {
         }
     }
     false
+}
+
+fn game_config(settings: GameSettings) -> GameConfig {
+    let mut rng = rand::rng();
+    let mut buffer = RandomSeed::default();
+    rng.fill(&mut buffer);
+    GameConfig::with_seed(settings, buffer)
 }
 
 #[get("/create-game")]
@@ -253,7 +260,7 @@ async fn connect(
                     p1: TetrisSocket::new(session.clone(), p1_id),
                     p2: TetrisSocket::new(existing, p2_id),
                     id,
-                    settings,
+                    config: game_config(settings),
                 },
                 None => Game::Ready {
                     p1: Some(session.clone()),
@@ -270,7 +277,7 @@ async fn connect(
                     p1: TetrisSocket::new(existing, p1_id),
                     p2: TetrisSocket::new(session.clone(), p2_id),
                     id,
-                    settings,
+                    config: game_config(settings),
                 },
                 None => Game::Ready {
                     p1,
