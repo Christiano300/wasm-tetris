@@ -17,8 +17,54 @@ declare global {
   }
 }
 
-window.backendUrl = "https://tetris.patzl.dev";
-// window.backendUrl = "http://" + location.hostname + ":4444";
+await init({
+  module_or_path: import.meta.env.DEV
+    ? "lib_bg.wasm"
+    : location.pathname + "/assets/lib_bg.wasm",
+});
+
+init_panic_hook();
+
+// window.backendUrl = "https://tetris.patzl.dev";
+window.backendUrl = "http://" + location.hostname + ":4444";
+
+let running = false;
+
+var then = window.performance.now();
+
+const pressedKeys = new Set();
+const keyMap = {
+  ArrowLeft: "left",
+  ArrowRight: "right",
+  ArrowUp: "cw",
+  ArrowDown: "soft_drop",
+  " ": "hard_drop",
+  c: "hold",
+  z: "ccw",
+  a: "left",
+  d: "right",
+  s: "soft_drop",
+  j: "ccw",
+  l: "cw",
+  k: "hold",
+};
+const controls = [
+  "left",
+  "right",
+  "cw",
+  "ccw",
+  "hold",
+  "hard_drop",
+  "soft_drop",
+];
+const fpsInterval = 1000 / 60;
+
+const canvas = document.querySelector("canvas");
+const ctx = canvas?.getContext("2d");
+if (!ctx) {
+  throw new Error("Canvas not found");
+}
+const game = new Instance(ctx, generateAuthToken, window.backendUrl);
 
 const joinGame = async (gameId: string) => {
   if (running) {
@@ -80,45 +126,6 @@ declare global {
   }
 }
 
-await init({
-  module_or_path: import.meta.env.DEV
-    ? "lib_bg.wasm"
-    : location.pathname + "/assets/lib_bg.wasm",
-});
-
-init_panic_hook();
-
-const pressedKeys = new Set();
-const keyMap = {
-  ArrowLeft: "left",
-  ArrowRight: "right",
-  ArrowUp: "cw",
-  ArrowDown: "soft_drop",
-  " ": "hard_drop",
-  c: "hold",
-  z: "ccw",
-  a: "left",
-  d: "right",
-  s: "soft_drop",
-  j: "ccw",
-  l: "cw",
-  k: "hold",
-};
-const controls = [
-  "left",
-  "right",
-  "cw",
-  "ccw",
-  "hold",
-  "hard_drop",
-  "soft_drop",
-];
-const fpsInterval = 1000 / 60;
-
-let running = false;
-
-var then = window.performance.now();
-
 function startGame() {
   console.log("starting game");
   running = true;
@@ -158,13 +165,6 @@ async function update(newtime: number) {
   then -= elapsed;
   game.draw();
 }
-
-const canvas = document.querySelector("canvas");
-const ctx = canvas?.getContext("2d");
-if (!ctx) {
-  throw new Error("Canvas not found");
-}
-const game = new Instance(ctx, generateAuthToken, window.backendUrl);
 
 window.addEventListener("keydown", (e) => {
   const action = keyMap[e.key];
