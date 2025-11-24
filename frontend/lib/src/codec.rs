@@ -1,75 +1,118 @@
-use bytes::buf::{Buf, BufMut};
-use futures_codec::{BytesMut, Decoder, Encoder};
-use rmp_serde::decode::Error as RmpDecError;
-use rmp_serde::encode::Error as RmpEncError;
-use serde::Deserialize;
-use std::io::{Cursor, Error as IoError};
-use tetris_core::net::Message;
+//! Adapted from <https://github.com/matthunz/futures-codec/blob/master/src/codec/cbor.rs> to use
+//! packed CBOR format
+use std::io::Error as IoError;
+use std::marker::PhantomData;
 
-pub struct MessagePackCodec;
+use bytes::{Buf, BufMut, BytesMut};
 
-#[allow(unused)]
-pub enum CodecError {
+use futures_codec::{Decoder, Encoder};
+use serde::{Deserialize, Serialize};
+use serde_cbor::Error as CborError;
+
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
+pub struct CborCodec<Enc, Dec> {
+    enc: PhantomData<Enc>,
+    dec: PhantomData<Dec>,
+}
+
+#[derive(Debug)]
+pub enum CborCodecError {
     Io(IoError),
-    RmpDec(RmpDecError),
-    RmpEnc(RmpEncError),
+    Cbor(CborError),
 }
 
-impl From<RmpDecError> for CodecError {
-    fn from(err: RmpDecError) -> Self {
-        Self::RmpDec(err)
+impl std::fmt::Display for CborCodecError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "I/O error: {e}"),
+            Self::Cbor(e) => write!(f, "CBOR error: {e}"),
+        }
     }
 }
 
-impl From<RmpEncError> for CodecError {
-    fn from(err: RmpEncError) -> Self {
-        Self::RmpEnc(err)
+impl std::error::Error for CborCodecError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(ref e) => Some(e),
+            Self::Cbor(ref e) => Some(e),
+        }
     }
 }
-impl From<IoError> for CodecError {
-    fn from(err: IoError) -> Self {
-        Self::Io(err)
+
+impl From<IoError> for CborCodecError {
+    fn from(e: IoError) -> Self {
+        Self::Io(e)
     }
 }
 
-impl Decoder for MessagePackCodec {
-    type Item = Message;
+impl From<CborError> for CborCodecError {
+    fn from(e: CborError) -> Self {
+        Self::Cbor(e)
+    }
+}
 
-    type Error = CodecError;
+impl<Enc, Dec> CborCodec<Enc, Dec>
+where
+    for<'de> Dec: Deserialize<'de> + 'static,
+    for<'de> Enc: Serialize + 'static,
+{
+    pub const fn new() -> Self {
+        Self {
+            enc: PhantomData,
+            dec: PhantomData,
+        }
+    }
+}
 
-    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        let mut cursor = Cursor::new(src);
+/// Decoder impl parses cbor objects from bytes
+impl<Enc, Dec> Decoder for CborCodec<Enc, Dec>
+where
+    for<'de> Dec: Deserialize<'de> + 'static,
+    for<'de> Enc: Serialize + 'static,
+{
+    type Item = Dec;
+    type Error = CborCodecError;
 
-        let mut de = rmp_serde::Deserializer::new(&mut cursor);
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        // Build deserializer
+        let mut de = serde_cbor::Deserializer::from_slice(buf);
 
-        let res = match Deserialize::deserialize(&mut de) {
-            Ok(val) => Ok(Some(val)),
+        // Attempt deserialization
+        let res: Result<Dec, _> = serde::de::Deserialize::deserialize(&mut de);
+
+        // If we ran out before parsing, return none and try again later
+        let res = match res {
+            Ok(v) => Ok(Some(v)),
+            Err(e) if e.is_eof() => Ok(None),
             Err(e) => Err(e.into()),
         };
 
-        let pos = cursor.position();
-        let after = cursor.into_inner();
+        // Update offset from iterator
+        let offset = de.byte_offset();
 
-        after.advance(pos as usize);
+        // Advance buffer
+        buf.advance(offset);
 
         res
     }
 }
 
-impl Encoder for MessagePackCodec {
-    type Item = Message;
+/// Encoder impl encodes object streams to bytes
+impl<Enc, Dec> Encoder for CborCodec<Enc, Dec>
+where
+    for<'de> Dec: Deserialize<'de> + 'static,
+    for<'de> Enc: Serialize + 'static,
+{
+    type Item = Enc;
+    type Error = CborCodecError;
 
-    type Error = CodecError;
+    fn encode(&mut self, data: Self::Item, buf: &mut BytesMut) -> Result<(), Self::Error> {
+        // Encode cbor
+        let j = serde_cbor::ser::to_vec_packed(&data)?;
 
-    fn encode(
-        &mut self,
-        item: Self::Item,
-        dst: &mut futures_codec::BytesMut,
-    ) -> Result<(), Self::Error> {
-        let data = rmp_serde::to_vec(&item)?;
-
-        dst.reserve(data.len());
-        dst.put_slice(&data);
+        // Write to buffer
+        buf.reserve(j.len());
+        buf.put_slice(&j);
 
         Ok(())
     }

@@ -6961,6 +6961,7 @@ dependencies = [
  "getrandom 0.3.3",
  "js-sys",
  "serde",
+ "serde_cbor",
  "tetris-core",
  "wasm-bindgen",
  "wasm-bindgen-futures",

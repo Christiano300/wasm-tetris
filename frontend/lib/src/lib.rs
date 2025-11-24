@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 
+mod codec;
 mod draw;
 mod input;
 mod instance;

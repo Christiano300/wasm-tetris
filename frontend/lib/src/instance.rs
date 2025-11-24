@@ -1,7 +1,7 @@
 #![allow(clippy::future_not_send)]
 
 use async_io_stream::IoStream;
-use futures_codec::{CborCodec, Framed};
+use futures_codec::Framed;
 use futures_util::{
     stream::{SplitSink, SplitStream, StreamExt},
     SinkExt,
@@ -10,6 +10,7 @@ use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{
+    codec::CborCodec,
     draw::DrawingContext,
     input::{FrameInputs, InputManager},
     tetris_confirm, tetris_prompt,
