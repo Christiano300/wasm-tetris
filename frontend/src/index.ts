@@ -1,4 +1,9 @@
-import init, { FrameInputs, GameSettings, Instance, init_panic_hook } from "lib";
+import init, {
+  FrameInputs,
+  GameSettings,
+  Instance,
+  init_panic_hook,
+} from "lib";
 
 import { generateAuthToken } from "./auth";
 
@@ -21,9 +26,7 @@ const joinGame = async (gameId: string) => {
   pressedKeys.clear();
   try {
     console.log("Connecting to game ", gameId);
-    game
-      .connect(gameId)
-      .then(startGame);
+    game.connect(gameId).then(startGame);
   } catch (e) {
     console.error("Error connecting to game?: ", e);
   }
@@ -35,16 +38,22 @@ const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
   }
 
   pressedKeys.clear();
-  game.start_singleplayer(new GameSettings(settings.jupiter, settings.easy, settings.nes, settings.random));
+  game.start_singleplayer(
+    new GameSettings(
+      settings.jupiter,
+      settings.easy,
+      settings.nes,
+      settings.random
+    )
+  );
   startGame();
 };
 
 const stopEverything = () => {
-  console.log("Stopping everything");
   running = false;
   pressedKeys.clear();
   game.goodbye();
-}
+};
 
 document.addEventListener("alpine:init", () => {
   initAlpine(joinGame, runSinglePlayer, stopEverything);
@@ -70,7 +79,11 @@ declare global {
   }
 }
 
-await init(import.meta.env.DEV ? "lib_bg.wasm" : location.pathname +  "/assets/lib_bg.wasm");
+await init({
+  module_or_path: import.meta.env.DEV
+    ? "lib_bg.wasm"
+    : location.pathname + "/assets/lib_bg.wasm",
+});
 
 init_panic_hook();
 
@@ -106,25 +119,28 @@ let running = false;
 var then = window.performance.now();
 
 function startGame() {
-  console.log("starting game")
+  console.log("starting game");
   running = true;
-  console.log("Running")
+  console.log("Running");
   then = window.performance.now();
   requestAnimationFrame(update);
 }
 
 async function update(newtime: number) {
+  if (!running) {
+    return;
+  }
   let elapsed = newtime - then;
   then = newtime;
   if (elapsed > 500) {
     elapsed = 500;
   }
-  
+
   const keys = controls.map((key) => pressedKeys.has(key)) as [
     boolean,
     boolean,
     boolean,
-    boolean, 
+    boolean,
     boolean,
     boolean,
     boolean

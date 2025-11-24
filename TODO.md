@@ -4,7 +4,7 @@
 - [x] NES Mode (lockdown on touch)
 - [x] Random Mode (no Bag)
 - [ ] Leaderboard
-- [ ] Styling
+- [x] Styling
 - [ ] Keymap
 - [x] Multiplayer 
 - [ ] Pause

@@ -211,25 +211,28 @@ impl Instance {
     }
 
     #[wasm_bindgen]
-    pub fn start_singleplayer(&self, settings: GameSettings) {
+    pub fn start_singleplayer(&self, settings: GameSettings) -> bool {
         let Ok(mut game) = self.game.try_borrow_mut() else {
-            return;
+            return false;
         };
         if game.is_some() {
-            return;
+            return false;
         }
         game.get_or_insert(Game::new(settings));
+        true
     }
 
     #[wasm_bindgen]
     pub async fn goodbye(&mut self) {
-        if let Ok(mut game) = self.game.try_borrow_mut() {
-            *game = None
+        let mut game = self.game.borrow_mut();
+        *game = None;
+        if let Some(mut session) = self.session.borrow_mut().take() {
+            spawn_local(async move {
+                let _ = session.send(Message::Disconnect).await;
+                let _ = session.close().await;
+            });
         }
-
-        if let Ok(mut session) = self.session.try_borrow_mut() {
-            *session = None
-        }
+        *self.opponent_board.borrow_mut() = None;
     }
 }
 
