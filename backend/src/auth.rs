@@ -65,10 +65,10 @@ fn hash(input: &str) -> String {
     output
 }
 
-/// Generates an auth token for a request and time
-pub fn gen_auth_token(req: &HighscoreReq, tens: u32) -> String {
+/// Generates an auth token for a request
+pub fn gen_auth_token(req: &HighscoreReq) -> String {
     hash(&format!(
-        "{:o} fffffffff {} esiovtb3w5iothbiouthes0u1234567890{tens}",
+        "{:o} fffffffff {} esiovtb3w5iothbiouthes0u1234567890",
         req.score, req.name
     ))
 }

@@ -14,7 +14,6 @@ use serde::Deserialize;
 use std::{
     collections::{BTreeSet, HashMap},
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
 };
 use tetris_core::tetris::{GameConfig, GameSettings, RandomSeed};
 use tokio::sync::Mutex;
@@ -106,16 +105,8 @@ fn get_id() -> String {
 }
 
 fn try_auth(req: &HighscoreReq) -> bool {
-    let millis = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("No system time")
-        .as_millis() as u64;
-    let total_tenths = millis / 10_000;
-    for i in (-2_i64)..5 {
-        let time_token = auth::gen_auth_token(req, (total_tenths as i64 - i) as u32);
-        if time_token == req.auth {
-            return true;
-        }
+    if auth::gen_auth_token(req) == req.auth {
+        return true;
     }
     false
 }

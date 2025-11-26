@@ -25,8 +25,8 @@ await init({
 
 init_panic_hook();
 
-// window.backendUrl = "https://tetris.patzl.dev";
-window.backendUrl = "http://" + location.hostname + ":4444";
+window.backendUrl = "https://tetris.patzl.dev";
+// window.backendUrl = "http://" + location.hostname + ":4444";
 
 let running = false;
 

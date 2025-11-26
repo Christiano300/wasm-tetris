@@ -58,4 +58,4 @@ function permute(state) {
   state[4] ^= state[5] ^ state[6] ^ state[3];
 }
 
-export const generateAuthToken = str => hash(str + "1234567890" + Math.floor(Date.now() / (1000 * 10)));
+export const generateAuthToken = str => hash(str + "1234567890");
