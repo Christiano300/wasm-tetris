@@ -12,5 +12,8 @@
 - [ ] Visible Game settings
 - [ ] Win Screen
 - [ ] NES Fix
-- [ ] Fix Unpacked CBOR Encoding
+- [x] Fix Unpacked CBOR Encoding
 - [ ] Fix "RefCell is held across await point"
+- [ ] AI
+- [x] Fix frontend blip
+- [ ] Leaderboards for different modes
