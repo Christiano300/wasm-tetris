@@ -14,14 +14,14 @@
     <script>
       if (
         window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: light)').matches
+        window.matchMedia("(prefers-color-scheme: light)").matches
       ) {
-        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.removeAttribute("data-theme");
       }
     </script>
   </head>
 
-  <!-- screen: menu, join, create, wait, setup, play, settings -->
+  <!-- screen: menu, join, create, wait, setup, play, settings, leaderboard -->
 
   <body
     x-data="{
@@ -32,6 +32,12 @@
   disableMessage: false,
   darkMode: false,
   lobbySocket: null,
+  leaderboard: [],
+
+  async fetchLeaderboard() {
+    const response = await fetch(window.backendUrl + '/leaderboard');
+    this.leaderboard = await response.json();
+  },
 
   createGame(data) {
   const url = new URL(window.backendUrl + '/create-game');
@@ -101,7 +107,13 @@
       <button @click="screen = 'settings'" x-show="screen === 'menu'">
         Settings
       </button>
-      <div x-show="screen == 'menu'">
+      <button
+        @click="screen = 'leaderboard'; fetchLeaderboard()"
+        x-show="screen === 'menu'"
+      >
+        Leaderboard
+      </button>
+      <div x-show="screen == 'menu' || screen === 'leaderboard'">
         <button @click="screen = 'create'">Create Game</button>
         <button @click="screen = 'join'">Join Game</button>
         <button @click="screen = 'setup'">Play singleplayer</button>
@@ -122,7 +134,73 @@
         </template>
       </div>
     </div>
-    <div class="page">
+    <div
+      x-cloak
+      x-show="screen == 'leaderboard'"
+      class="leaderboard-page"
+      x-data="{ lbMode: 'Normal' }"
+    >
+      <h1>Leaderboard</h1>
+      <div class="button-group">
+        <button
+          @click="lbMode = 'Normal'"
+          :class="lbMode === 'Normal' ? 'active' : ''"
+        >
+          Normal
+        </button>
+        <button
+          @click="lbMode = 'Jupiter'"
+          :class="lbMode === 'Jupiter' ? 'active' : ''"
+        >
+          Jupiter
+        </button>
+        <button
+          @click="lbMode = 'Nes'"
+          :class="lbMode === 'Nes' ? 'active' : ''"
+        >
+          Nes
+        </button>
+      </div>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>Score</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template
+            x-for="(entry, index) in leaderboard.filter(e => e.mode === lbMode)"
+            :key="index"
+          >
+            <tr>
+              <td x-text="index + 1"></td>
+              <td x-text="entry.name"></td>
+              <td x-text="entry.score"></td>
+              <td>
+                <img
+                  src="assets/duel.svg"
+                  alt="duel"
+                  class="duel-icon"
+                  x-show="entry.was_multiplayer"
+                  title="This was a multiplayer game"
+                />
+                <img
+                  src="assets/random.svg"
+                  alt="random"
+                  class="random-icon"
+                  x-show="entry.was_random"
+                  title="This game used the random piece generator"
+                />
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <div class="page-centered">
       <div class="menu" x-show="screen=='menu'">
         <h1 class="title">WASM TETRIS</h1>
         <p class="subtitle">by Christian Patzl</p>
@@ -149,6 +227,7 @@
           <input type="checkbox" x-model="random" />
           Random: No Bag system, pieces are completely random
         </label>
+        <span x-show="easy">Warning: games in easy mode are not eligible for a highscore</span>
         <button
           class="create-game"
           x-show="screen == 'create'"

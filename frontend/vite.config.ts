@@ -7,6 +7,6 @@ export default defineConfig({
     target: "esnext",
     minify: "esbuild",
   },
-  assetsInclude: "node_modules/lib/*.wasm",
+  assetsInclude: ["node_modules/lib/*.wasm", "assets/*.svg"],
   base: "/tetris"
 });

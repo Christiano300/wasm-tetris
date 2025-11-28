@@ -1,7 +1,16 @@
 [package]
 name = "tetris-backend"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+default-run = "main"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "importer"
+path = "src/importer.rs"
 
 [dependencies]
 serde.workspace = true
@@ -20,6 +29,7 @@ serde_cbor.workspace = true
 tokio = { version = "1.45.1", features = ["macros"] }
 futures-util.workspace = true
 persistent-kv = "1.0.2"
+clap = { version = "4.5.53", features = ["derive"] }
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }

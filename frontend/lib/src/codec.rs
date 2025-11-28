@@ -33,8 +33,8 @@ impl std::fmt::Display for CborCodecError {
 impl std::error::Error for CborCodecError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::Io(ref e) => Some(e),
-            Self::Cbor(ref e) => Some(e),
+            Self::Io(e) => Some(e),
+            Self::Cbor(e) => Some(e),
         }
     }
 }

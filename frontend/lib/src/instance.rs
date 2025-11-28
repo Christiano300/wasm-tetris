@@ -3,8 +3,8 @@
 use async_io_stream::IoStream;
 use futures_codec::Framed;
 use futures_util::{
-    stream::{SplitSink, SplitStream, StreamExt},
     SinkExt,
+    stream::{SplitSink, SplitStream, StreamExt},
 };
 use std::{cell::RefCell, rc::Rc};
 use wasm_bindgen_futures::spawn_local;
@@ -17,11 +17,11 @@ use crate::{
 };
 use js_sys::Function;
 use tetris_core::{
-    net::Message,
+    net::{HighscoreReq, Message},
     tetris::{Board, Event, Game, GameConfig, GameSettings, Phase},
 };
 use wasm_bindgen::prelude::*;
-use web_sys::{window, CanvasRenderingContext2d, Headers, RequestInit};
+use web_sys::{CanvasRenderingContext2d, Headers, RequestInit, window};
 use ws_stream_wasm::{WsMeta, WsStreamIo};
 
 type MessageCodec = CborCodec<Message, Message>;
@@ -43,6 +43,7 @@ pub struct Instance {
     session: Rc<RefCell<Option<TetrisSession>>>,
     opponent_board: Rc<RefCell<Option<Board>>>,
     share_cooldown: u8,
+    is_multiplayer: bool,
 }
 
 #[wasm_bindgen]
@@ -63,6 +64,7 @@ impl Instance {
             backend_url,
             opponent_board: Rc::new(RefCell::new(None)),
             share_cooldown: SHARE_COOLDOWN,
+            is_multiplayer: false,
         }
     }
 
@@ -146,20 +148,28 @@ impl Instance {
         self.share_cooldown -= 1;
         if self.share_cooldown == 0 {
             self.share_cooldown = SHARE_COOLDOWN;
-            if let Some(ref mut session) = *self.session.borrow_mut() {
-                if let Some(ref game) = *self.game.borrow() {
-                    let mut board = game.board.clone();
-                    board.place(&game.piece);
-                    let _ = session.send(Message::GameState(board.into())).await;
-                }
+            if let Some(ref mut session) = *self.session.borrow_mut()
+                && let Some(ref game) = *self.game.borrow()
+            {
+                let mut board = game.board.clone();
+                board.place(&game.piece);
+                let _ = session.send(Message::GameState(board.into())).await;
             }
         }
         for event in &events {
             match event {
                 Event::Gameover => {
                     let mut game = self.game.borrow_mut();
-                    if let Some(ref mut game) = *game {
-                        gameover(&self.backend_url, &self.auth_func, game.score);
+                    if let Some(ref mut game) = *game
+                        && !game.settings.easy
+                    {
+                        gameover(
+                            &self.backend_url,
+                            &self.auth_func,
+                            game.score,
+                            self.is_multiplayer,
+                            game.settings,
+                        );
                     }
                     *game = None;
                     if let Some(mut session) = self.session.borrow_mut().take() {
@@ -209,10 +219,11 @@ impl Instance {
         ));
 
         self.session = session;
+        self.is_multiplayer = true;
     }
 
     #[wasm_bindgen]
-    pub fn start_singleplayer(&self, settings: GameSettings) -> bool {
+    pub fn start_singleplayer(&mut self, settings: GameSettings) -> bool {
         let config = GameConfig::default_seed(settings);
         let Ok(mut game) = self.game.try_borrow_mut() else {
             return false;
@@ -221,6 +232,7 @@ impl Instance {
             return false;
         }
         game.get_or_insert(Game::new(config));
+        self.is_multiplayer = false;
         true
     }
 
@@ -270,7 +282,13 @@ async fn conn_loop_static(
     }
 }
 
-fn gameover(backend_url: &str, auth_func: &Function, score: u32) {
+fn gameover(
+    backend_url: &str,
+    auth_func: &Function,
+    score: u32,
+    is_multiplayer: bool,
+    settings: GameSettings,
+) {
     let window = window().unwrap();
     if !tetris_confirm("You lost!, do you want to share your score?") {
         return;
@@ -293,8 +311,15 @@ fn gameover(backend_url: &str, auth_func: &Function, score: u32) {
     let headers = Headers::new().unwrap();
     let _ = headers.set("Content-Type", "application/json");
     options.set_headers(&JsValue::from(headers));
-    options.set_body(&JsValue::from_str(&format!(
-        "{{\"score\": {score}, \"auth\": \"{token}\", \"name\": \"{name}\"}}",
-    )));
+    let req = HighscoreReq {
+        auth: token,
+        name,
+        score,
+        settings,
+        was_multiplayer: is_multiplayer,
+    };
+    options.set_body(&JsValue::from_str(
+        &serde_json_wasm::to_string(&req).unwrap(),
+    ));
     let _ = window.fetch_with_str_and_init(&format!("{backend_url}/highscore"), &options);
 }

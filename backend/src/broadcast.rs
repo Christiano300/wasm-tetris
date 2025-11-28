@@ -2,11 +2,11 @@
 
 use std::{sync::Arc, time::Duration};
 
-use actix_web::{rt::time::interval, Responder};
+use actix_web::{Responder, rt::time::interval};
 use actix_web_lab::sse::{self, Sse};
 use futures_util::future;
 use log::info;
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 
 pub struct Broadcaster {
     inner: Mutex<BroadcasterInner>,
@@ -62,7 +62,7 @@ impl Broadcaster {
     }
 
     /// Registers client with broadcaster, returning an SSE response body.
-    pub async fn new_client(&self, init: &str) -> impl Responder {
+    pub async fn new_client(&self, init: &str) -> impl Responder + use<> {
         let (tx, rx) = mpsc::channel(10);
 
         tx.send(sse::Data::new(init).into()).await.unwrap();

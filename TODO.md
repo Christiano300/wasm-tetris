@@ -3,7 +3,7 @@
 - [x] Easy Mode (no leveling)
 - [x] NES Mode (lockdown on touch)
 - [x] Random Mode (no Bag)
-- [ ] Leaderboard
+- [x] Leaderboard
 - [x] Styling
 - [ ] Keymap
 - [x] Multiplayer 
@@ -16,4 +16,5 @@
 - [ ] Fix "RefCell is held across await point"
 - [ ] AI
 - [x] Fix frontend blip
-- [ ] Leaderboards for different modes
+- [x] Leaderboards for different modes
+- [ ] Server status

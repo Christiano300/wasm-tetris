@@ -1,5 +1,5 @@
-use crate::HighscoreReq;
 use std::fmt::Write;
+use tetris_core::net::HighscoreReq;
 
 fn permute(state: &mut [u32]) {
     let mut copy: [u32; 8] = [0; 8];
@@ -65,10 +65,10 @@ fn hash(input: &str) -> String {
     output
 }
 
-/// Generates an auth token for a request
-pub fn gen_auth_token(req: &HighscoreReq) -> String {
+/// Attempts authentication and returns if the request is authorized
+pub fn try_auth(req: &HighscoreReq) -> bool {
     hash(&format!(
         "{:o} fffffffff {} esiovtb3w5iothbiouthes0u1234567890",
         req.score, req.name
-    ))
+    )) == req.auth
 }

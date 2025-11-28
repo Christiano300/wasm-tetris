@@ -110,11 +110,7 @@ impl Game {
 
     fn get_sockets(&mut self, id: &str) -> (&mut TetrisSocket, &mut TetrisSocket) {
         if let Game::Running { p1, p2, .. } = self {
-            if p1.id == id {
-                (p1, p2)
-            } else {
-                (p2, p1)
-            }
+            if p1.id == id { (p1, p2) } else { (p2, p1) }
         } else {
             panic!("Tried to get players of non-running game")
         }

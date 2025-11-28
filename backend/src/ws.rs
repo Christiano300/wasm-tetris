@@ -1,12 +1,12 @@
 use std::{sync::Arc, time::Duration};
 
-use actix::clock::{interval, Instant};
+use actix::clock::{Instant, interval};
 use actix_web::{rt::pin, web};
 use actix_ws::{AggregatedMessage, AggregatedMessageStream, Session};
 use log::info;
 use tokio::{select, sync::Mutex};
 
-use crate::{game::Game, Games};
+use crate::{Games, game::Game};
 
 static HB_INTERVAL: Duration = Duration::from_secs(5);
 static TIMEOUT: Duration = Duration::from_secs(15);
