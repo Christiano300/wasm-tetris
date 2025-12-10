@@ -204,8 +204,8 @@ impl DrawingContext {
         x: f64,
         y: f64,
     ) {
+        ctx.clear_rect(x, y, 31. * 4., 31. * 2.);
         if let Some(hold) = hold {
-            ctx.clear_rect(x, y, 31. * 4., 31. * 2.);
             self.draw_tetrimino(ctx, hold, x, y, false, true);
         }
     }
