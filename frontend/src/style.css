@@ -46,6 +46,23 @@ header {
   border-bottom: 2px solid var(--highlighted);
 }
 
+/* mobile */
+@media screen and (max-width: 650px) {
+  header {
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: stretch;
+  }
+  header button {
+    width: calc(50% - 0.5rem);
+  }
+  header div {
+    width: 100%;
+    display: flex;
+    gap: 1rem;
+  }
+}
+
 /* increase padding left on parent hover */
 .back-icon:hover:before {
   margin-left: -0.5rem;
@@ -88,7 +105,7 @@ header {
   min-height: calc(100vh - 17rem);
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  /* padding: 1rem; */
   align-items: center;
   justify-content: center;
   margin: auto;
@@ -306,4 +323,31 @@ td:nth-child(2) {
 
 .random-icon {
   background: #67f;
+}
+
+canvas {
+  touch-action: none;
+}
+
+/* tetris page */
+/* scale on mobile */
+@media screen and (max-width: 650px) {
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
+.tetris {
+  position: relative;
+}
+
+.cache {
+  /* on the left top corner of the canvas */
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 5rem;
+  height: 10rem;
+  z-index: 1;
 }

@@ -248,7 +248,8 @@
         <p x-text="'Your id: ' + (waitingId ?? 'Loading...')"></p>
       </div>
       <div x-cloak x-show="screen == 'play'" class="tetris">
-        <canvas width="1000" height="700"></canvas>
+        <canvas width="650" height="700"></canvas>
+        <div class="cache"></div>
       </div>
       <div x-cloak x-show="screen == 'settings'" class="form">
         <h1>Settings</h1>
