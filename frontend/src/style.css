@@ -339,8 +339,7 @@ canvas {
   touch-action: none;
 }
 
-/* tetris page */
-/* scale on mobile */
+/* tetris page mobile */
 @media screen and (max-width: 650px) {
   canvas {
     width: 100% !important;
@@ -353,7 +352,6 @@ canvas {
 }
 
 .cache {
-  /* on the left top corner of the canvas */
   position: absolute;
   top: 0;
   left: 0;
