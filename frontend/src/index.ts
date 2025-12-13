@@ -186,14 +186,25 @@ window.addEventListener("keyup", (e) => {
 // swipe support
 let touchStartX = 0;
 let touchStartY = 0;
+let touchStartTime = 0;
+let lastDragX = 0;
+let isSoftDropping = false;
 const minSwipeDistance = 30;
+const tapThreshold = 10;
+const dragStep = 20;
+const softDropThreshold = 30;
+const flickTime = 300;
 
 window.addEventListener(
   "touchstart",
   (e) => {
     if (!running) return;
-    touchStartX = e.changedTouches[0].clientX;
-    touchStartY = e.changedTouches[0].clientY;
+    const touch = e.changedTouches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+    lastDragX = touchStartX;
+    isSoftDropping = false;
   },
   { passive: false },
 );
@@ -203,6 +214,30 @@ window.addEventListener(
   (e) => {
     if (!running) return;
     e.preventDefault();
+    const touch = e.changedTouches[0];
+
+    // Horizontal Drag
+    let diffX = touch.clientX - lastDragX;
+    while (diffX > dragStep) {
+      triggerAction("right");
+      lastDragX += dragStep;
+      diffX -= dragStep;
+    }
+    while (diffX < -dragStep) {
+      triggerAction("left");
+      lastDragX -= dragStep;
+      diffX += dragStep;
+    }
+
+    // Vertical Drag (Soft Drop)
+    const totalDy = touch.clientY - touchStartY;
+    if (totalDy > softDropThreshold && !isSoftDropping) {
+      pressedKeys.add("soft_drop");
+      isSoftDropping = true;
+    } else if (totalDy < softDropThreshold && isSoftDropping) {
+      pressedKeys.delete("soft_drop");
+      isSoftDropping = false;
+    }
   },
   { passive: false },
 );
@@ -211,22 +246,35 @@ window.addEventListener(
   "touchend",
   (e) => {
     if (!running) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
+    const touch = e.changedTouches[0];
+    const totalDx = touch.clientX - touchStartX;
+    const totalDy = touch.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
 
-    const dx = touchEndX - touchStartX;
-    const dy = touchEndY - touchStartY;
+    // Stop Soft Drop
+    if (isSoftDropping) {
+      pressedKeys.delete("soft_drop");
+      isSoftDropping = false;
+    }
 
-    if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
-      triggerAction("cw");
-    } else {
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) triggerAction("right");
-        else triggerAction("left");
+    // tap
+    if (
+      Math.abs(totalDx) < tapThreshold &&
+      Math.abs(totalDy) < tapThreshold &&
+      dt < flickTime
+    ) {
+      if (touch.clientX < window.innerWidth / 2) {
+        triggerAction("ccw");
       } else {
-        if (dy > 0) triggerAction("soft_drop");
-        else triggerAction("hard_drop");
+        triggerAction("cw");
       }
+    } // Hard Drop
+    else if (
+      totalDy > minSwipeDistance &&
+      Math.abs(totalDx) < Math.abs(totalDy) &&
+      dt < flickTime
+    ) {
+      triggerAction("hard_drop");
     }
   },
   { passive: false },
