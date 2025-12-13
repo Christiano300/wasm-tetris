@@ -250,6 +250,24 @@ impl DrawingContext {
             }
         }
     }
+
+    pub fn draw_messages(
+        ctx: &CanvasRenderingContext2d,
+        messages: &[(String, String)],
+        x: f64,
+        mut y: f64,
+    ) {
+        for (msg, color) in messages {
+            ctx.set_fill_style_str(color);
+            ctx.set_text_baseline("top");
+            ctx.set_font("25px sans-serif");
+            let _ = ctx.fill_text(msg, x, y);
+            y += ctx
+                .measure_text(color)
+                .expect("could not get text metric object")
+                .font_bounding_box_descent();
+        }
+    }
 }
 
 struct SubImage {

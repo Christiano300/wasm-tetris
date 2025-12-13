@@ -18,3 +18,4 @@
 - [x] Fix frontend blip
 - [x] Leaderboards for different modes
 - [ ] Server status
+- [ ] Watch other players

@@ -61,15 +61,15 @@
   }
   },
   setDarkMode() {
-    // Only store if cookies are allowed
-    if (this.cookieConsent !== 'none') {
-      localStorage.setItem('wt_dark', this.darkMode ? '1' : '0');
-    }
+    localStorage.setItem('wt_dark', this.darkMode ? '1' : '0');
     if (this.darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
+  },
+  setUserName() {
+    localStorage.setItem('wt_username', this.username);
   },
   init() {
   if (localStorage.getItem('wt_cookie-consent') === null) {
@@ -79,8 +79,13 @@
   this.cookieConsent = localStorage.getItem('wt_cookie-consent') ?? 'necessary';
   },
   removeAllCookies() {
-  localStorage.removeItem('wt_cookie-consent');
-  this.removeExtraCookies();
+    this.removeNecessaryCookies();
+    this.removeExtraCookies();
+  },
+  removeNecessaryCookies() {
+    localStorage.removeItem('wt_cookie-consent');
+    localStorage.removeItem('wt_dark');
+    localStorage.removeItem('wt_username');
   },
   removeExtraCookies() {
   },
@@ -89,7 +94,6 @@
   this.needCookieConsent = false;
   if (this.cookieConsent === 'none') {
     this.removeAllCookies();
-    localStorage.removeItem('wt_dark'); // Remove dark mode cookie
   } else if (this.cookieConsent === 'necessary') {
     this.removeExtraCookies();
   }
@@ -209,7 +213,7 @@
         x-cloak
         class="form"
         x-show="screen == 'create' || screen == 'setup'"
-        x-data="{jupiter: false, easy: false, nes: false, random: false}"
+        x-data="{jupiter: false, easy: false, nes: false, random: false, public: true}"
       >
         <label>
           <input type="checkbox" x-model="jupiter" />
@@ -226,6 +230,10 @@
         <label>
           <input type="checkbox" x-model="random" />
           Random: No Bag system, pieces are completely random
+        </label>
+        <label>
+          <input type="checkbox" x-model="public" />
+          Public: Your game will be visible to others
         </label>
         <span x-show="easy">Warning: games in easy mode are not eligible for a highscore</span>
         <button
@@ -279,6 +287,10 @@
           <input type="radio" value="all" x-model="cookieConsent" />
           All cookies, including those used for anonymous and internal analytics
           (there is no marketing on this site)
+        </label>
+        <label>
+          Your username (there are no accounts and duplicate names are possible)
+          <input x-model="username" x-init="username = localStorage.getItem('wt_username')" @change="setUserName">
         </label>
         <button
           id="update-preference"

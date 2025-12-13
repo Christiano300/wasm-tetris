@@ -29,6 +29,7 @@ serde-json-wasm = "1.0.1"
 version = "0.3.72"
 features = [
   'CanvasRenderingContext2d',
+  'TextMetrics',
   'CanvasGradient',
   'HtmlImageElement',
   'OffscreenCanvas',

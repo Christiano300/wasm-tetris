@@ -42,6 +42,7 @@ pub struct Instance {
     game: Rc<RefCell<Option<Game>>>,
     session: Rc<RefCell<Option<TetrisSession>>>,
     opponent_board: Rc<RefCell<Option<Board>>>,
+    messages: Rc<RefCell<Vec<(String, String)>>>,
     share_cooldown: u8,
     is_multiplayer: bool,
 }
@@ -64,6 +65,7 @@ impl Instance {
             backend_url,
             opponent_board: Rc::new(RefCell::new(None)),
             share_cooldown: SHARE_COOLDOWN,
+            messages: Rc::new(RefCell::new(Vec::with_capacity(1))),
             is_multiplayer: false,
         }
     }
@@ -128,6 +130,13 @@ impl Instance {
             );
         }
         DrawingContext::draw_level(&self.context, game.level, BOARD_X + 320., 20.);
+
+        DrawingContext::draw_messages(
+            &self.context,
+            &self.messages.borrow(),
+            BOARD_X + 350. + 160.,
+            BOARD_Y,
+        );
     }
 
     /// Should be called exaclty 60 times a second
@@ -182,14 +191,15 @@ impl Instance {
                 }
                 Event::Completion(lines) => {
                     if let Some(ref mut session) = *self.session.borrow_mut() {
-                        let _ = session
-                            .send(Message::LineSend(match lines {
-                                2 => 1,
-                                3 => 2,
-                                4 => 4,
-                                _ => 0,
-                            }))
-                            .await;
+                        let lines = match lines {
+                            2 => 1,
+                            3 => 2,
+                            4 => 4,
+                            _ => 0,
+                        };
+                        if lines > 0 {
+                            let _ = session.send(Message::LineSend(lines)).await;
+                        }
                     }
                 }
             }
@@ -216,6 +226,7 @@ impl Instance {
             stream,
             self.game.clone(),
             Rc::clone(&self.opponent_board),
+            Rc::clone(&self.messages),
         ));
 
         self.session = session;
@@ -255,6 +266,7 @@ async fn conn_loop_static(
     mut stream: TetrisStream,
     game: Rc<RefCell<Option<Game>>>,
     opponent_board: Rc<RefCell<Option<Board>>>,
+    messages: Rc<RefCell<Vec<(String, String)>>>,
 ) {
     while let Some(msg) = stream.next().await {
         let Ok(msg) = msg else {
@@ -274,6 +286,10 @@ async fn conn_loop_static(
             }
             Message::Gameover | Message::Disconnect => {
                 *opponent_board.borrow_mut() = Some(EMPTY_BOARD);
+                messages.borrow_mut().push((
+                    String::from("The other player has lost,\nYou win!"),
+                    String::from("#0f0"),
+                ));
             }
             Message::GameState(board) => {
                 *opponent_board.borrow_mut() = Some(*board);

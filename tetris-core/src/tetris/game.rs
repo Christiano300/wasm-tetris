@@ -232,7 +232,7 @@ impl Game {
                 if !self.settings.easy {
                     self.level_goal -= rows as i8;
                     if self.level_goal <= 0 {
-                        self.level += 1;
+                        self.level = self.level.saturating_add(1);
                         self.level_goal += LEVEL_GOAL;
                     }
                 }
@@ -245,9 +245,14 @@ impl Game {
     pub fn accumulate_garbage(&mut self, lines: u8) {
         self.garbage_acc += lines;
     }
-}
 
-impl Game {
+    pub fn skip_completion(&mut self) {
+        if let Phase::Completion = self.phase {
+            self.user_actions(vec![]);
+            self.phase = Phase::Generation { frames_left: 0 };
+        }
+    }
+
     fn add_garbage(&mut self) {
         self.board.push_up(self.garbage_acc);
         for i in 0..self.garbage_acc {
