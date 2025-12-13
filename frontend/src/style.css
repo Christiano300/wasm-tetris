@@ -241,6 +241,16 @@ input[type="checkbox"] {
   padding: 1.5rem;
 }
 
+@media screen and (max-width: 650px) {
+  .leaderboard-page {
+    padding: 0.5rem;
+  }
+
+  .leaderboard-table {
+    font-size: 0.9rem !important;
+  }
+}
+
 .button-group {
   display: inline-flex;
   margin-bottom: 1rem;
