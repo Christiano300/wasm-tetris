@@ -106,14 +106,14 @@ pub struct Action {
     pub action: PieceAction,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HorizontalMove {
     Left = 0,
     Right = 1,
     None = 2,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rotation {
     Cw = 3,
     Ccw = 4,
@@ -190,7 +190,8 @@ impl Action {
             _ => Rotation::None,
         };
 
-        let action = match rng.random_range(0..=8) {
+        let do_something = rotation == Rotation::None && horizontal == HorizontalMove::None;
+        let action = match rng.random_range(0..=(if do_something { 3 } else { 8 })) {
             0 => PieceAction::HardDrop,
             1..=2 => PieceAction::SoftDrop,
             3 => PieceAction::Hold,

@@ -6,7 +6,11 @@ use futures_util::{
     SinkExt,
     stream::{SplitSink, SplitStream, StreamExt},
 };
+#[cfg(feature = "export")]
+use serde::Serialize;
 use std::{cell::RefCell, rc::Rc};
+#[cfg(feature = "export")]
+use tetris_core::tetris::Action;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::{
@@ -18,7 +22,7 @@ use crate::{
 use js_sys::Function;
 use tetris_core::{
     net::{HighscoreReq, Message},
-    tetris::{Board, Event, Game, GameConfig, GameSettings, Phase},
+    tetris::{Board, Event, Game, GameConfig, GameSettings, Mino, Phase, Tetrimino},
 };
 use wasm_bindgen::prelude::*;
 use web_sys::{CanvasRenderingContext2d, Headers, RequestInit, window};
@@ -32,6 +36,20 @@ type TetrisStream = SplitStream<TetrisFrames>;
 
 const SHARE_COOLDOWN: u8 = 15;
 const EMPTY_BOARD: Board = Board::new();
+
+#[cfg(feature = "export")]
+#[derive(Serialize)]
+struct ExportFrame {
+    pub board: Board,
+    pub piece: Tetrimino,
+    pub ghost: Option<Tetrimino>,
+    pub hold: Option<Tetrimino>,
+    pub next_queue: Vec<Mino>,
+    pub score: u32,
+    pub level: u8,
+    pub inputs: Vec<Action>,
+}
+
 #[wasm_bindgen]
 pub struct Instance {
     auth_func: Function,
@@ -45,6 +63,8 @@ pub struct Instance {
     messages: Rc<RefCell<Vec<(String, String)>>>,
     share_cooldown: u8,
     is_multiplayer: bool,
+    #[cfg(feature = "export")]
+    data: Vec<ExportFrame>,
 }
 
 #[wasm_bindgen]
@@ -67,7 +87,15 @@ impl Instance {
             share_cooldown: SHARE_COOLDOWN,
             messages: Rc::new(RefCell::new(Vec::with_capacity(1))),
             is_multiplayer: false,
+            #[cfg(feature = "export")]
+            data: Vec::new(),
         }
+    }
+
+    #[cfg(feature = "export")]
+    #[wasm_bindgen]
+    pub fn get_data(&self) -> Vec<u8> {
+        serde_cbor::ser::to_vec_packed(&self.data).unwrap_or_default()
     }
 
     #[wasm_bindgen]
@@ -150,6 +178,19 @@ impl Instance {
             // if we receive start we cant start the loop from inside rust
             return true;
         };
+        #[cfg(feature = "export")]
+        {
+            self.data.push(ExportFrame {
+                board: game.board.clone(),
+                piece: game.piece.clone(),
+                ghost: Some(game.ghost.clone()),
+                hold: game.hold.clone(),
+                next_queue: game.next_queue.iter().map(|m| m.kind).collect(),
+                score: game.score,
+                level: game.level,
+                inputs: frame_actions.clone(),
+            });
+        }
         game.user_actions(frame_actions);
         let events = game.events.clone();
         drop(borrow);

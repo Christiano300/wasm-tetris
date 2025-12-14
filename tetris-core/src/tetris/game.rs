@@ -71,7 +71,8 @@ pub enum Event {
     Gameover,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize)]
 pub enum Action {
     Left,
     Right,

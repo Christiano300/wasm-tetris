@@ -23,7 +23,7 @@ pub enum Mino {
 }
 
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize)]
 pub enum Rotation {
     #[default]
     Zero,
@@ -333,7 +333,7 @@ impl Board {
 
 /// Represents a Tetrimino currently being dropped, or a ghost, or a "shadow" used for rotation
 /// testing or in the preview queue
-#[derive(Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct Tetrimino {
     pub kind: Mino,
     pub rotation: Rotation,

@@ -99,9 +99,8 @@ pub fn draw_game(game: &Game, frame: &mut Frame, area: Rect) {
     }
 
     frame.render_widget(
-        Paragraph::new(render_as_text(&img)).block(Block::bordered()
-        .border_type(BorderType::Rounded)
-        ),
+        Paragraph::new(render_as_text(&img))
+            .block(Block::bordered().border_type(BorderType::Rounded)),
         area,
     );
 }
@@ -115,6 +114,7 @@ pub struct Stat {
     pub reward: f32,
     pub steps: usize,
     pub reward_per_step: f32,
+    pub loss: f32,
 }
 
 pub struct Tui {
@@ -144,10 +144,10 @@ impl Tui {
         self.stats.push_back(stat);
     }
 
-    pub fn render(&mut self, env: &Environment) -> Option<Event> {
+    pub fn render(&mut self, env: &Environment, loss: Option<f32>, reward: f32) -> Option<Event> {
         self.terminal
             .draw(|frame| {
-                Self::draw(frame, env, &self.stats);
+                Self::draw(frame, env, &self.stats, loss, reward);
             })
             .expect("Failed to draw frame");
         self.handle_events()
@@ -157,18 +157,35 @@ impl Tui {
         ratatui::restore();
     }
 
-    fn draw(frame: &mut Frame, env: &Environment, stats: &VecDeque<Stat>) {
+    fn draw(
+        frame: &mut Frame,
+        env: &Environment,
+        stats: &VecDeque<Stat>,
+        loss: Option<f32>,
+        reward: f32,
+    ) {
         let chunks = Layout::horizontal([
             Constraint::Fill(1),
             Constraint::Min(IMG_WIDTH as u16 * 2 + 2),
         ])
         .split(frame.area());
         draw_game(&env.game, frame, chunks[1]);
-        let mut lines = vec![Line::from("Last episodes: ")];
+        let mut lines = vec![
+            Line::from(format!("Current Reward: {:>7.2}", reward)),
+            Line::from(format!(
+                "Current Loss:    {}",
+                match loss {
+                    Some(l) => format!("{:>7.5}", l),
+                    None => "N/A".to_string(),
+                }
+            )),
+            Line::from("Last episodes: "),
+            Line::from("Episode |  Reward  | Steps |   RPS   | Loss "),
+        ];
         lines.extend(stats.iter().rev().map(|stat| {
             Line::from(format!(
-                "Episode {:>4}: Reward: {:>7.2}, Steps: {:>5}, RPS: {:>6.3}",
-                stat.episode, stat.reward, stat.steps, stat.reward_per_step
+                "{:>7} | {:>7.2} | {:>5} | {:>6.3} | {:>6.3}",
+                stat.episode, stat.reward, stat.steps, stat.reward_per_step, stat.loss
             ))
         }));
         lines.extend_from_slice(&[

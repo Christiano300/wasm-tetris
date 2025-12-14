@@ -45,11 +45,11 @@ fn main() -> Result<(), burn::record::RecorderError> {
 
     let device = burn::backend::wgpu::WgpuDevice::default();
     let model: Model<MyAutodiffBackend> = train_loop(
-        100,
+        100_000,
         500,
         &device,
-        DQNConfig::new(0.999, 0.05, 0.005, 32),
-        RandomActionThresholdConfig::new(0.9, 0.05, 30.),
+        DQNConfig::new(0.999, 0.05, 0.01, 32),
+        RandomActionThresholdConfig::new(0.9, 0.05, 50.),
     );
     model.save_file(
         "./model_saved",

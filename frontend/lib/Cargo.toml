@@ -41,7 +41,8 @@ features = [
 ]
 
 [features]
-default = ["console_error_panic_hook"]
+default = ["console_error_panic_hook", "export"]
+export = []
 
 
 [lints.clippy]

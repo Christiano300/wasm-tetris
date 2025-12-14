@@ -15,7 +15,7 @@ use crate::{
     memory::Memory,
     model::{Model, ModelConfig},
     tetris::Action,
-    tui::{Stat, Tui, Event},
+    tui::{Event, Stat, Tui},
 };
 
 #[derive(Config, Debug)]
@@ -62,7 +62,7 @@ impl<B: AutodiffBackend> DQN<B> {
         &mut self,
         memory: &Memory,
         optimizer: &mut (impl Optimizer<Model<B>, B> + Sized),
-    ) {
+    ) -> f32 {
         let (states, actions, rewards, next_states, not_dones) =
             memory.get_samples::<B>(self.config.batch_size);
 
@@ -94,6 +94,8 @@ impl<B: AutodiffBackend> DQN<B> {
         replace_with_or_abort(&mut self.target_net, |target_net| {
             target_net.soft_update(&self.policy_net, self.config.tau)
         });
+
+        loss.to_data().as_slice().unwrap()[0]
     }
 }
 
@@ -135,24 +137,18 @@ pub fn train_loop<B: AutodiffBackend>(
         .init();
 
     for episode in 0..num_episodes {
+        memory.clear();
         let mut episode_done = false;
         let mut episode_reward: f32 = 0.0;
         let mut episode_duration = 0_usize;
         let mut state = env.state();
+        let mut episode_loss = 0.0;
+        let mut loss_iterations = 0.0;
         let eps_threshold = random_action.get_threshold(episode);
 
         while !episode_done {
             let action = model.select_action(Tensor::from_floats(state, device), eps_threshold);
             let snapshot = env.step(&action);
-
-            if let Some(event) = tui.render(&env) {
-                match event {
-                    Event::Quit => {
-                        tui.end();
-                        return model.target_net;
-                    }
-                }
-            }
 
             episode_reward += snapshot.reward;
 
@@ -164,15 +160,27 @@ pub fn train_loop<B: AutodiffBackend>(
                 snapshot.done,
             );
 
-            if config.batch_size < memory.len() {
-                model.train(&memory, &mut optimizer);
+            let loss = if config.batch_size <= memory.len() {
+                loss_iterations += 1.0;
+                Some(model.train(&memory, &mut optimizer))
+            } else {
+                None
+            };
+            episode_loss += loss.unwrap_or(0.0);
+
+            if let Some(event) = tui.render(&env, loss, snapshot.reward) {
+                match event {
+                    Event::Quit => {
+                        tui.end();
+                        return model.target_net;
+                    }
+                }
             }
 
             episode_duration += 1;
 
             if snapshot.done || episode_duration >= max_steps {
                 env.reset();
-                memory.clear();
                 episode_done = true;
 
                 tui.new_stat(Stat {
@@ -180,6 +188,7 @@ pub fn train_loop<B: AutodiffBackend>(
                     reward: episode_reward,
                     steps: episode_duration,
                     reward_per_step: episode_reward / (episode_duration as f32),
+                    loss: episode_loss / (loss_iterations as f32),
                 });
             } else {
                 state = snapshot.state;
