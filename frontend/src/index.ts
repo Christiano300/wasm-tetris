@@ -1,8 +1,8 @@
 import init, {
   FrameInputs,
   GameSettings,
-  Instance,
   init_panic_hook,
+  Instance,
 } from "lib";
 
 import { generateAuthToken } from "./auth";
@@ -32,7 +32,6 @@ let running = false;
 
 var then = window.performance.now();
 
-const pressedKeys = new Set();
 const keyMap = {
   ArrowLeft: "left",
   ArrowRight: "right",
@@ -47,8 +46,12 @@ const keyMap = {
   j: "ccw",
   l: "cw",
   k: "hold",
-};
-const controls = [
+} as const;
+type KeyAction = keyof typeof keyMap;
+type Action = typeof keyMap[KeyAction];
+const pressedKeys: Set<Action> = new Set();
+
+const controls: Action[] = [
   "left",
   "right",
   "cw",
@@ -90,8 +93,8 @@ const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
       settings.jupiter,
       settings.easy,
       settings.nes,
-      settings.random
-    )
+      settings.random,
+    ),
   );
   startGame();
 };
@@ -151,7 +154,7 @@ async function update(newtime: number) {
     boolean,
     boolean,
     boolean,
-    boolean
+    boolean,
   ];
   while (elapsed > fpsInterval) {
     running = await game.update(new FrameInputs(...keys));
@@ -176,15 +179,124 @@ async function update(newtime: number) {
 }
 
 window.addEventListener("keydown", (e) => {
-  const action = keyMap[e.key];
+  const action = (keyMap as Record<string, Action | undefined>)[e.key];
   if (action) {
     pressedKeys.add(action);
   }
 });
 
 window.addEventListener("keyup", (e) => {
-  const action = keyMap[e.key];
+  const action = (keyMap as Record<string, Action | undefined>)[e.key];
   if (action) {
     pressedKeys.delete(action);
   }
+});
+
+// swipe support
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
+let lastDragX = 0;
+let isSoftDropping = false;
+const minSwipeDistance = 30;
+const tapThreshold = 10;
+const dragStep = 20;
+const softDropThreshold = 30;
+const flickTime = 300;
+
+window.addEventListener(
+  "touchstart",
+  (e) => {
+    if (!running) return;
+    const touch = e.changedTouches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    touchStartTime = Date.now();
+    lastDragX = touchStartX;
+    isSoftDropping = false;
+  },
+  { passive: false },
+);
+
+window.addEventListener(
+  "touchmove",
+  (e) => {
+    if (!running) return;
+    e.preventDefault();
+    const touch = e.changedTouches[0];
+
+    // Horizontal Drag
+    let diffX = touch.clientX - lastDragX;
+    while (diffX > dragStep) {
+      triggerAction("right");
+      lastDragX += dragStep;
+      diffX -= dragStep;
+    }
+    while (diffX < -dragStep) {
+      triggerAction("left");
+      lastDragX -= dragStep;
+      diffX += dragStep;
+    }
+
+    // Vertical Drag (Soft Drop)
+    const totalDy = touch.clientY - touchStartY;
+    if (totalDy > softDropThreshold && !isSoftDropping) {
+      pressedKeys.add("soft_drop");
+      isSoftDropping = true;
+    } else if (totalDy < softDropThreshold && isSoftDropping) {
+      pressedKeys.delete("soft_drop");
+      isSoftDropping = false;
+    }
+  },
+  { passive: false },
+);
+
+window.addEventListener(
+  "touchend",
+  (e) => {
+    if (!running) return;
+    const touch = e.changedTouches[0];
+    const totalDx = touch.clientX - touchStartX;
+    const totalDy = touch.clientY - touchStartY;
+    const dt = Date.now() - touchStartTime;
+
+    // Stop Soft Drop
+    if (isSoftDropping) {
+      pressedKeys.delete("soft_drop");
+      isSoftDropping = false;
+    }
+
+    // tap
+    if (
+      Math.abs(totalDx) < tapThreshold &&
+      Math.abs(totalDy) < tapThreshold &&
+      dt < flickTime
+    ) {
+      if (touch.clientX < window.innerWidth / 2) {
+        triggerAction("ccw");
+      } else {
+        triggerAction("cw");
+      }
+    } // Hard Drop
+    else if (
+      totalDy > minSwipeDistance &&
+      Math.abs(totalDx) < Math.abs(totalDy) &&
+      dt < flickTime
+    ) {
+      triggerAction("hard_drop");
+    }
+  },
+  { passive: false },
+);
+
+function triggerAction(action: Action) {
+  pressedKeys.add(action);
+  setTimeout(() => pressedKeys.delete(action), 50);
+}
+
+// cache click
+const cacheDiv = document.querySelector(".cache");
+cacheDiv?.addEventListener("click", () => {
+  console.log("cache click");
+  triggerAction("hold");
 });

@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "devDependencies": {
-    "@types/node": "^20",
     "@types/alpinejs": "^3.13.11",
+    "@types/node": "^20",
     "esbuild": "0.20.2",
     "vite": "^4",
+    "vite-plugin-dev-qrcode": "^0.0.4",
     "vite-plugin-wasm-pack": "^0.1.12"
   },
   "scripts": {
