@@ -350,12 +350,3 @@ canvas {
 .tetris {
   position: relative;
 }
-
-.cache {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 5rem;
-  height: 20rem;
-  z-index: 1;
-}

@@ -28,6 +28,9 @@ init_panic_hook();
 window.backendUrl = "https://tetris.patzl.dev";
 // window.backendUrl = "http://" + location.hostname + ":4444";
 
+let xCurrent = 0;
+let xPos = 0;
+
 let running = false;
 
 var then = window.performance.now();
@@ -48,7 +51,7 @@ const keyMap = {
   k: "hold",
 } as const;
 type KeyAction = keyof typeof keyMap;
-type Action = typeof keyMap[KeyAction];
+type Action = (typeof keyMap)[KeyAction];
 const pressedKeys: Set<Action> = new Set();
 
 const controls: Action[] = [
@@ -93,8 +96,8 @@ const runSinglePlayer = (settings: Pick<GameSettings, keyof GameSettings>) => {
       settings.jupiter,
       settings.easy,
       settings.nes,
-      settings.random,
-    ),
+      settings.random
+    )
   );
   startGame();
 };
@@ -154,10 +157,18 @@ async function update(newtime: number) {
     boolean,
     boolean,
     boolean,
-    boolean,
+    boolean
   ];
+
   while (elapsed > fpsInterval) {
-    running = await game.update(new FrameInputs(...keys));
+    const moveLeft = xCurrent > xPos;
+    const moveRight = xCurrent < xPos;
+    if (moveLeft) {
+      xCurrent--;
+    } else if (moveRight) {
+      xCurrent++;
+    }
+    running = await game.update(new FrameInputs(...keys), moveLeft, moveRight);
     if (!running) {
       console.log("Game ended");
     }
@@ -187,13 +198,12 @@ window.addEventListener("keyup", (e) => {
 let touchStartX = 0;
 let touchStartY = 0;
 let touchStartTime = 0;
-let lastDragX = 0;
+let lastDragY = 0;
 let isSoftDropping = false;
-const minSwipeDistance = 30;
-const tapThreshold = 10;
-const dragStep = 20;
+const tapMoveThreshold = 10;
+const tapMsThreshold = 300;
 const softDropThreshold = 30;
-const flickTime = 300;
+const flickThreshold = 15;
 
 window.addEventListener(
   "touchstart",
@@ -203,10 +213,12 @@ window.addEventListener(
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
     touchStartTime = Date.now();
-    lastDragX = touchStartX;
+    lastDragY = touchStartY;
     isSoftDropping = false;
+    xPos = 0;
+    xCurrent = 0;
   },
-  { passive: false },
+  { passive: false }
 );
 
 window.addEventListener(
@@ -217,17 +229,7 @@ window.addEventListener(
     const touch = e.changedTouches[0];
 
     // Horizontal Drag
-    let diffX = touch.clientX - lastDragX;
-    while (diffX > dragStep) {
-      triggerAction("right");
-      lastDragX += dragStep;
-      diffX -= dragStep;
-    }
-    while (diffX < -dragStep) {
-      triggerAction("left");
-      lastDragX -= dragStep;
-      diffX += dragStep;
-    }
+    xPos = Math.round((touch.clientX - touchStartX) / (window.innerWidth / 15));
 
     // Vertical Drag (Soft Drop)
     const totalDy = touch.clientY - touchStartY;
@@ -238,8 +240,14 @@ window.addEventListener(
       pressedKeys.delete("soft_drop");
       isSoftDropping = false;
     }
+
+    const dY = touch.clientY - lastDragY;
+    if (dY > flickThreshold) {
+      triggerAction("hard_drop");
+    }
+    lastDragY = touch.clientY;
   },
-  { passive: false },
+  { passive: false }
 );
 
 window.addEventListener(
@@ -259,35 +267,33 @@ window.addEventListener(
 
     // tap
     if (
-      Math.abs(totalDx) < tapThreshold &&
-      Math.abs(totalDy) < tapThreshold &&
-      dt < flickTime
+      Math.abs(totalDx) < tapMoveThreshold &&
+      Math.abs(totalDy) < tapMoveThreshold &&
+      dt < tapMsThreshold
     ) {
-      if (touch.clientX < window.innerWidth / 2) {
+      // translate tap to canvas position
+      const canvasRect = canvas?.getBoundingClientRect();
+      if (!canvasRect) return;
+      const canvasX =
+        ((touch.clientX - canvasRect.left) / canvasRect.width) * canvas.width;
+      const canvasY =
+        ((touch.clientY - canvasRect.top) / canvasRect.height) * canvas.height;
+
+      if (canvasX < 150 && canvasY < 200) {
+        triggerAction("hold");
+      } else if (touch.clientX < window.innerWidth / 2) {
         triggerAction("ccw");
       } else {
         triggerAction("cw");
       }
-    } // Hard Drop
-    else if (
-      totalDy > minSwipeDistance &&
-      Math.abs(totalDx) < Math.abs(totalDy) &&
-      dt < flickTime
-    ) {
-      triggerAction("hard_drop");
     }
+    xCurrent = 0;
+    xPos = 0;
   },
-  { passive: false },
+  { passive: false }
 );
 
 function triggerAction(action: Action) {
   pressedKeys.add(action);
   setTimeout(() => pressedKeys.delete(action), 50);
 }
-
-// cache click
-const cacheDiv = document.querySelector(".cache");
-cacheDiv?.addEventListener("click", () => {
-  console.log("cache click");
-  triggerAction("hold");
-});
