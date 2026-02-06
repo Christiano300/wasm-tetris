@@ -247,11 +247,24 @@ impl Game {
         self.garbage_acc += lines;
     }
 
-    pub fn skip_completion(&mut self) {
+    pub fn skip_completion(&mut self) -> Option<u8> {
         if let Phase::Completion = self.phase {
             self.user_actions(vec![]);
+            let rows = self
+                .events
+                .iter()
+                .filter_map(|e| {
+                    if let Event::Completion(rows) = e {
+                        Some(*rows)
+                    } else {
+                        None
+                    }
+                })
+                .next();
             self.phase = Phase::Generation { frames_left: 0 };
+            return rows;
         }
+        None
     }
 
     fn add_garbage(&mut self) {
