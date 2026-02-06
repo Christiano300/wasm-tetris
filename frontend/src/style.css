@@ -46,6 +46,23 @@ header {
   border-bottom: 2px solid var(--highlighted);
 }
 
+/* mobile */
+@media screen and (max-width: 650px) {
+  header {
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: stretch;
+  }
+  header button {
+    width: calc(50% - 0.5rem);
+  }
+  header div {
+    width: 100%;
+    display: flex;
+    gap: 1rem;
+  }
+}
+
 /* increase padding left on parent hover */
 .back-icon:hover:before {
   margin-left: -0.5rem;
@@ -88,7 +105,7 @@ header {
   min-height: calc(100vh - 17rem);
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  /* padding: 1rem; */
   align-items: center;
   justify-content: center;
   margin: auto;
@@ -224,6 +241,16 @@ input[type="checkbox"] {
   padding: 1.5rem;
 }
 
+@media screen and (max-width: 650px) {
+  .leaderboard-page {
+    padding: 0.5rem;
+  }
+
+  .leaderboard-table {
+    font-size: 0.9rem !important;
+  }
+}
+
 .button-group {
   display: inline-flex;
   margin-bottom: 1rem;
@@ -306,4 +333,20 @@ td:nth-child(2) {
 
 .random-icon {
   background: #67f;
+}
+
+canvas {
+  touch-action: none;
+}
+
+/* tetris page mobile */
+@media screen and (max-width: 650px) {
+  canvas {
+    width: 100% !important;
+    height: auto !important;
+  }
+}
+
+.tetris {
+  position: relative;
 }

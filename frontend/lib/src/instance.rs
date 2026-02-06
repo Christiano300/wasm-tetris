@@ -170,8 +170,8 @@ impl Instance {
     /// Should be called exaclty 60 times a second
     #[wasm_bindgen]
     #[allow(clippy::pedantic)]
-    pub async fn update(&mut self, inputs: FrameInputs) -> bool {
-        let frame_actions = self.input_manager.update(&inputs);
+    pub async fn update(&mut self, inputs: FrameInputs, move_left: bool, move_right: bool) -> bool {
+        let frame_actions = self.input_manager.update(&inputs, move_left, move_right);
 
         let mut borrow = self.game.borrow_mut();
         let Some(ref mut game) = *borrow else {

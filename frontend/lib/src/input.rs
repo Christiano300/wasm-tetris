@@ -70,7 +70,12 @@ impl InputManager {
         }
     }
 
-    pub fn update(&mut self, inputs: &FrameInputs) -> Vec<Action> {
+    pub fn update(
+        &mut self,
+        inputs: &FrameInputs,
+        move_left: bool,
+        move_right: bool,
+    ) -> Vec<Action> {
         let mut actions = vec![];
 
         input!(inputs.left, self.left_frames, actions, Left);
@@ -87,6 +92,12 @@ impl InputManager {
         }
         input!(inputs.cw, self.cw, actions, Cw);
         input!(inputs.ccw, self.ccw, actions, Ccw);
+        if move_left && !inputs.left {
+            actions.push(Action::Left);
+        }
+        if move_right && !inputs.right {
+            actions.push(Action::Right);
+        }
         actions
     }
 }
