@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["backend", "tetris-core", "frontend/lib", "ai"]
+members = ["backend", "tetris-core", "frontend/lib"]
 
 [workspace.dependencies]
 serde = { version = "1.0.217", features = ["derive"] }
