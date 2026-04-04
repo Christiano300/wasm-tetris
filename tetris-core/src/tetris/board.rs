@@ -1,7 +1,7 @@
 use serde::{
-    Deserialize, Serialize,
     de::{self, Expected, Visitor},
     ser::SerializeTuple,
+    Deserialize, Serialize,
 };
 
 pub const BOARD_WIDTH: usize = 10;
@@ -23,7 +23,7 @@ pub enum Mino {
 }
 
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug, Serialize, Deserialize)]
 pub enum Rotation {
     #[default]
     Zero,
@@ -333,7 +333,7 @@ impl Board {
 
 /// Represents a Tetrimino currently being dropped, or a ghost, or a "shadow" used for rotation
 /// testing or in the preview queue
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Tetrimino {
     pub kind: Mino,
     pub rotation: Rotation,
