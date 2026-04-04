@@ -72,7 +72,7 @@ pub enum Event {
 }
 
 #[cfg_attr(feature = "wasm-bindgen", wasm_bindgen)]
-#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Action {
     Left,
     Right,
