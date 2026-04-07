@@ -103,8 +103,9 @@ pub struct Game {
     pub next_queue: VecDeque<Tetrimino>,
     pub hold: Option<Tetrimino>,
     can_hold: bool,
+    can_floor_kick: bool,
     pub phase: Phase,
-    lockdown_timer: u8,
+    pub lockdown_timer: u8,
     lockdown_moves: u8,
     lockdown_y: i8,
     level_goal: i8,
@@ -137,6 +138,7 @@ impl Game {
             bag_idx: 7,
             hold: None,
             can_hold: true,
+            can_floor_kick: true,
             level: 1,
             phase: Phase::Generation { frames_left: 0 },
             lockdown_timer: LOCKDOWN_START,
@@ -172,6 +174,7 @@ impl Game {
                     self.next_piece(piece);
                     self.start_fall();
                     self.can_hold = true;
+                    self.can_floor_kick = true;
                     self.lockdown_moves = LOCKDOWN_MOVES;
                 } else {
                     self.phase = Phase::Generation {
@@ -303,6 +306,7 @@ impl Game {
                         continue;
                     }
                     self.can_hold = false;
+                    self.can_floor_kick = true;
                     if self.hold.is_none() {
                         self.hold = Some(Tetrimino::new(self.piece.kind, 0, 0));
                         let piece = self.get_next_piece();
@@ -316,7 +320,8 @@ impl Game {
                 Action::HardDrop => {
                     let before = self.piece.offset_y;
                     self.board.drop(&mut self.piece);
-                    self.score += 2 * (self.piece.offset_y - before).max(0) as u32;
+                    self.score +=
+                        2 * self.level as u32 * (self.piece.offset_y - before).max(0) as u32;
                     self.board.place(&self.piece);
                     self.phase = Phase::Completion;
                     self.lockdown_timer = LOCKDOWN_START;
@@ -373,8 +378,14 @@ impl Game {
     }
 
     fn rotate(&mut self, direction: Direction) -> bool {
-        let success = self.board.rotate(&mut self.piece, direction);
+        let prev_y = self.piece.offset_y;
+        let success = self
+            .board
+            .rotate(&mut self.piece, self.can_floor_kick, direction);
         self.update_ghost();
+        if success && self.piece.offset_y + 2 == prev_y {
+            self.can_floor_kick = false;
+        }
         success
     }
 

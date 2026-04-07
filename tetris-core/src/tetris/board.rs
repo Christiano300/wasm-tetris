@@ -1,7 +1,7 @@
 use serde::{
+    Deserialize, Serialize,
     de::{self, Expected, Visitor},
     ser::SerializeTuple,
-    Deserialize, Serialize,
 };
 
 pub const BOARD_WIDTH: usize = 10;
@@ -209,7 +209,12 @@ impl Board {
     }
 
     /// Rotates the tetrimino with wall-kicks. Returns if the rotation was successful.
-    pub fn rotate(&self, tetrimino: &mut Tetrimino, direction: Direction) -> bool {
+    pub fn rotate(
+        &self,
+        tetrimino: &mut Tetrimino,
+        can_floor_kick: bool,
+        direction: Direction,
+    ) -> bool {
         let to = tetrimino.rotation.rotate(direction);
         let offsets = match tetrimino.kind {
             Mino::J | Mino::L | Mino::S | Mino::Z | Mino::T => {
@@ -225,7 +230,7 @@ impl Board {
         for (x, y) in offsets {
             clone.offset_x += x;
             clone.offset_y += y;
-            if !self.can_place(&clone) {
+            if !self.can_place(&clone) || (!can_floor_kick && y == -2) {
                 clone.offset_x -= x;
                 clone.offset_y -= y;
                 continue;
