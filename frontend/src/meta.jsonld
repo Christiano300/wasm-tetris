@@ -1,0 +1,26 @@
+{
+    "@context": "https://schema.org",
+    "@type": [
+        "VideoGame",
+        "WebApplication"
+    ],
+    "name": "WASM-Tetris",
+    "url": "https://patzl.dev/tetris/",
+    "description": "A browser-based Tetris game with single-player and multiplayer support, built using Rust and WebAssembly.",
+    "applicationCategory": "GameApplication",
+    "applicationSubCategory": "Arcade game",
+    "gamePlatform": "Web browser",
+    "operatingSystem": "Any",
+    "genre": "Arcade",
+    "playMode": [
+        "SinglePlayer",
+        "MultiPlayer"
+    ],
+    "offers": {
+        "@type": "Offer",
+        "price": 0,
+        "priceCurrency": "USD"
+    },
+    "isAccessibleForFree": true,
+    "inLanguage": "en"
+}

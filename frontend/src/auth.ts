@@ -1,4 +1,4 @@
-function hash(s) {
+function hash(s: string): string {
   let state = new Uint32Array([
     0x5fb039fb, 0x65b567d2,
     0x996f9cf8, 0x4d82daac,
@@ -26,7 +26,7 @@ function hash(s) {
   return output.join("");
 }
 
-function permute(state) {
+function permute(state: Uint32Array) {
   let copy = new Uint32Array(8);
   for (let i = 0; i < 8; i++) {
     copy[i] = state[i] & ~state[(i + 1) % 8];
@@ -58,4 +58,4 @@ function permute(state) {
   state[4] ^= state[5] ^ state[6] ^ state[3];
 }
 
-export const generateAuthToken = str => hash(str + "1234567890");
+export const generateAuthToken = (str: string): string => hash(str + "1234567890");

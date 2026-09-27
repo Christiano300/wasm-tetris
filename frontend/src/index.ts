@@ -284,9 +284,9 @@ window.addEventListener(
       const canvasRect = canvas?.getBoundingClientRect();
       if (!canvasRect) return;
       const canvasX =
-        ((touch.clientX - canvasRect.left) / canvasRect.width) * canvas.width;
+        ((touch.clientX - canvasRect.left) / canvasRect.width) * canvas!.width;
       const canvasY =
-        ((touch.clientY - canvasRect.top) / canvasRect.height) * canvas.height;
+        ((touch.clientY - canvasRect.top) / canvasRect.height) * canvas!.height;
 
       if (canvasX < 150 && canvasY < 200) {
         triggerAction("hold");
